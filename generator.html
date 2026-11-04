@@ -249,6 +249,47 @@ let state = { items: [], style: "basic", threadsSeed: 0, threadsType: "proof", s
 // 확장 프로그램 안에서는 chrome.storage(토스·쿠팡 페이지와 공유), 파일로 열면 localStorage
 const IN_EXTENSION = typeof chrome !== "undefined" && !!(chrome.storage && chrome.storage.local);
 
+// 인터넷 주소(PC 바탕화면 앱)로 열어도, PC 크롬에 확장 프로그램이 있으면 그 보관함을 같이 써요
+const EXT_ID = "pheogimfhmdccikmcbpghdbjekkklfbh";
+let BRIDGE = false;
+let lastBridgeJson = "";
+function extCall(msg) {
+  return new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage(EXT_ID, msg, (res) => {
+        if (chrome.runtime.lastError) return resolve(null);
+        resolve(res || null);
+      });
+    } catch (e) { resolve(null); }
+  });
+}
+async function connectBridge() {
+  if (IN_EXTENSION || typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.sendMessage) return false;
+  const res = await extCall({ type: "get" });
+  if (!res || !res.ok) return false;
+  BRIDGE = true;
+  // 이 화면에만 담겨 있던 상품은 확장 프로그램 보관함으로 옮겨요
+  const ext = res.state && Array.isArray(res.state.items) ? res.state : null;
+  const local = state;
+  if (ext) {
+    const links = new Set(ext.items.map((it) => it.link).filter(Boolean));
+    const extra = local.items.filter((it) => !it.link || !links.has(it.link));
+    applyLoaded({ ...ext, items: [...ext.items, ...extra] });
+  }
+  save();
+  return true;
+}
+// 확장 프로그램이 토스·쿠팡에서 담은 상품을 2초마다 확인해서 화면에 반영
+function watchBridge() {
+  setInterval(async () => {
+    if (!BRIDGE || document.hidden || editingIdx !== null) return;
+    const res = await extCall({ type: "get" });
+    if (!res || !res.state) return;
+    const j = JSON.stringify(res.state);
+    if (j !== lastBridgeJson) { lastBridgeJson = j; applyLoaded(res.state); draw(); }
+  }, 2000);
+}
+
 function applyLoaded(s) {
   if (s && Array.isArray(s.items)) state = { ...state, ...s, settings: { ...state.settings, ...(s.settings || {}) } };
 }
@@ -265,7 +306,10 @@ async function load() {
 function save() {
   try {
     if (IN_EXTENSION) chrome.storage.local.set({ [STORE]: state });
-    else localStorage.setItem(STORE, JSON.stringify(state));
+    else {
+      localStorage.setItem(STORE, JSON.stringify(state));
+      if (BRIDGE) { lastBridgeJson = JSON.stringify(state); extCall({ type: "set", state }); }
+    }
   } catch (e) { /* 저장이 막힌 환경에서도 생성기는 계속 동작 */ }
 }
 
@@ -533,11 +577,14 @@ const PENDING = "rangi-pending-link";
 const LINK_PAGE = "https://partners.coupang.com/#affiliate/ws/link-to-any-page";
 
 function makeLink(it) {
+  const pending = { productUrl: it.productUrl, name: it.name, at: Date.now() };
   if (IN_EXTENSION) {
     // 간편 링크 화면에서 확장 프로그램이 이 주소를 자동으로 넣고 [링크 생성]을 눌러줘요
-    chrome.storage.local.set({ [PENDING]: { productUrl: it.productUrl, name: it.name, at: Date.now() } }, () => {
+    chrome.storage.local.set({ [PENDING]: pending }, () => {
       window.open(LINK_PAGE, "_blank");
     });
+  } else if (BRIDGE) {
+    extCall({ type: "pending", pending }).then(() => window.open(LINK_PAGE, "_blank"));
   } else {
     copy(it.productUrl);
     toast("쿠팡 주소를 복사했어요. 간편 링크 화면에 붙여넣고 링크를 만든 뒤 ✏️ 수정으로 넣어주세요");
@@ -695,6 +742,10 @@ $("adTag").addEventListener("change", () => { state.settings.adTag = $("adTag").
 
 (async () => {
   await load();
+  if (await connectBridge()) {
+    $("headerHint").textContent = "✅ 크롬 확장 프로그램과 연결됐어요. 토스·쿠팡에서 [링크 발급/생성]을 누르면 여기로 자동으로 담겨요.";
+    watchBridge();
+  }
   $("roomName").value = state.settings.roomName;
   $("roomLink").value = state.settings.roomLink;
   $("adTag").checked = state.settings.adTag;
