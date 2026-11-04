@@ -1,1 +1,0 @@
-App icon artwork (shopping cart, baguette, broccoli, carrot, apple, leafy green): Noto Emoji 3D by Google, licensed under the Apache License 2.0 - https://github.com/googlefonts/noto-emoji
