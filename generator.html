@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>랑이 특가 생성기</title>
+<link rel="manifest" href="app.webmanifest">
+<meta name="theme-color" content="#f2c300">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #ffffff; --ink: #1f1f1f; --muted: #6b6b6b;
+    --line: #e4e2dc; --accent: #f2c300; --accent-ink: #3a2f00; --danger: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Pretendard", "Malgun Gothic", system-ui, sans-serif; background: var(--bg); color: var(--ink); }
+  header { padding: 18px 24px; background: var(--accent); color: var(--accent-ink); }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; }
+  main { display: grid; grid-template-columns: minmax(320px, 420px) 1fr; gap: 20px; padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
+  @media (max-width: 860px) {
+    main { grid-template-columns: 1fr; padding: 12px; gap: 0; }
+    header { padding: 14px 16px; }
+    input, select, textarea { font-size: 16px; } /* 휴대폰에서 입력할 때 화면이 확대되지 않게 */
+    button { padding: 10px 14px; }
+  }
+  section.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 14px; background: #fff; }
+  textarea { resize: vertical; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .check { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--ink); margin-top: 10px; }
+  .check input { width: auto; }
+  button { cursor: pointer; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 12px; font: inherit; font-size: 14px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  button.danger { color: var(--danger); }
+  button:hover { filter: brightness(0.96); }
+  .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .item { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+  .item-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+  .item-head strong { font-size: 15px; }
+  .badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: #fff4bf; color: var(--accent-ink); margin-left: 6px; }
+  pre.out { white-space: pre-wrap; word-break: break-all; background: #faf9f6; border: 1px dashed var(--line); border-radius: 8px; padding: 10px; margin: 0; font-family: inherit; font-size: 14px; line-height: 1.55; }
+  .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 24px 0; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tabs button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛒 랑이 특가 생성기</h1>
+  <p>상품 정보만 넣으면 카톡방·스레드용 홍보 글을 만들어 줘요. 입력한 내용은 이 기기에만 저장돼요.</p>
+  <p id="headerHint" style="font-weight:700"></p>
+</header>
+
+<main>
+  <div>
+    <section class="card">
+      <h2>📥 붙여넣기로 담기</h2>
+      <p class="hint" style="margin-top:0">토스·쿠팡에서 복사한 링크 글을 붙여넣으면 상품명과 링크를 아래에 채워 줘요. 휴대폰에 앱으로 설치하면 토스 앱의 공유 목록에서 바로 보낼 수 있어요.</p>
+      <textarea id="importText" rows="3" placeholder="예) [광고] 토스쇼핑 쉐어링크 활동으로...&#10;고당도 꿀사과 3kg&#10;https://..."></textarea>
+      <div class="btns">
+        <button class="primary" id="pasteBtn">📋 복사한 내용 가져오기</button>
+        <button id="importBtn">↓ 아래에 채우기</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>① 상품 추가</h2>
+      <label>제휴 링크 *</label>
+      <input id="link" placeholder="쿠팡 파트너스 / 토스 쉐어링크 / 카카오 선물하기 링크">
+      <div class="row">
+        <div>
+          <label>제휴 서비스</label>
+          <select id="platform">
+            <option value="auto">자동 감지</option>
+            <option value="coupang">쿠팡 파트너스</option>
+            <option value="toss">토스 쉐어링크</option>
+            <option value="kakao">카카오 선물하기 큐레이터</option>
+            <option value="etc">기타</option>
+          </select>
+        </div>
+        <div>
+          <label>등급</label>
+          <select id="grade">
+            <option value="auto">자동 (할인율 기준)</option>
+            <option value="초대박">🔥🔥🔥 초대박</option>
+            <option value="대박">🔥🔥 대박</option>
+            <option value="특가">🔥 특가</option>
+          </select>
+        </div>
+      </div>
+      <label>상품명 *</label>
+      <input id="name" placeholder="예: 고당도 노지 감귤 1.5kg">
+      <div class="row">
+        <div><label>판매가(원) *</label><input id="price" type="number" min="0" placeholder="9900"></div>
+        <div><label>평소 가격(원)</label><input id="orig" type="number" min="0" placeholder="15900"></div>
+      </div>
+      <div class="row3">
+        <div><label>수량/용량</label><input id="qty" type="number" min="0" step="any" placeholder="24"></div>
+        <div>
+          <label>단위</label>
+          <select id="unit">
+            <option>개</option><option>봉</option><option>팩</option><option>매</option><option>롤</option>
+            <option>캔</option><option>병</option><option>g</option><option>kg</option><option>ml</option><option>L</option>
+          </select>
+        </div>
+        <div><label>배송비(원)</label><input id="ship" type="number" min="0" placeholder="0 = 무료"></div>
+      </div>
+      <label>쿠폰/추가 할인 메모</label>
+      <input id="coupon" placeholder="예: 와우회원 10% 쿠폰 적용가">
+      <label>한마디 (구매 포인트)</label>
+      <textarea id="comment" rows="2" placeholder="예: 작년에 품절 대란 났던 그 귤이에요"></textarea>
+      <div class="btns">
+        <button class="primary" id="addBtn">보관함에 담기</button>
+        <button id="clearForm">입력 지우기</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>⚙️ 내 방 설정</h2>
+      <label>카톡방 이름</label>
+      <input id="roomName" placeholder="예: 랑이 특가방">
+      <label>오픈채팅방 링크 (스레드 모집글에 들어가요)</label>
+      <input id="roomLink" placeholder="https://open.kakao.com/o/...">
+      <label class="check"><input type="checkbox" id="adTag" checked> 글 맨 위에 [광고] 표시 넣기</label>
+      <p class="hint">광고 표시를 빼거나 숨기면 수수료가 정산되지 않거나 제재를 받을 수 있어요. 문구는 각 제휴 서비스 가이드에서 꼭 한번 확인하세요.</p>
+    </section>
+  </div>
+
+  <div>
+    <section class="card">
+      <h2>② 보관함 <span id="count" class="badge">0개</span></h2>
+      <div class="tabs" id="styleTabs">
+        <button data-style="basic" class="on">기본형</button>
+        <button data-style="unit">단가 강조형</button>
+        <button data-style="urgent">품절 임박형</button>
+        <button data-style="short">한 줄형</button>
+      </div>
+      <div id="list"></div>
+      <div class="btns">
+        <button class="primary" id="copyAll">📋 전체 모음 메시지 복사</button>
+        <button class="primary" id="shareAll" hidden>📤 모음 메시지 공유</button>
+        <button id="copyThreads">🧵 스레드 모집글 복사</button>
+        <button class="danger" id="clearAll">보관함 비우기</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>🧵 스레드 모집글</h2>
+      <div class="tabs" id="threadsTabs">
+        <button data-type="proof" class="on">① 가격 증거형</button>
+        <button data-type="empathy">② 공감형</button>
+        <button data-type="list">③ 리스트형</button>
+        <button data-type="reaction">④ 방 반응 인증형</button>
+        <button data-type="question">⑤ 질문·참여형</button>
+      </div>
+      <p class="hint" id="threadsTip"></p>
+      <label>본문</label>
+      <pre class="out" id="threadsOut"></pre>
+      <div class="btns">
+        <button class="primary" id="copyThreadsBody">📋 본문 복사</button>
+        <button class="primary" id="shareThreads" hidden>📤 본문 공유</button>
+        <button id="rerollThreads">🎲 다른 문구로</button>
+      </div>
+      <label>첫 댓글 (카톡방 링크)</label>
+      <pre class="out" id="threadsComment"></pre>
+      <div class="btns"><button class="primary" id="copyThreadsComment">📋 첫 댓글 복사</button></div>
+      <label class="check"><input type="checkbox" id="linkInBody"> 카톡방 링크를 본문에도 넣기</label>
+      <p class="hint">본문에 외부 링크가 있으면 노출이 줄어든다는 얘기가 많아서, 기본값은 링크를 첫 댓글에 따로 다는 방식이에요. 스레드 글에 제휴 링크(쿠팡·토스 등)를 직접 걸 때는 광고 표시도 함께 넣어야 해요.</p>
+    </section>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const STORE = "rangi-deal-generator-v1";
+
+const DISCLOSURE = {
+  coupang: "이 포스팅은 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.",
+  // 토스 공식 가이드 권장 문구 (sharelink-docs.toss.im/disclosure/disclosure)
+  toss: "토스쇼핑 쉐어링크 활동으로, 링크 구매 시 수수료를 지급받습니다.",
+  kakao: "카카오톡 선물하기 큐레이터 활동으로 일정액의 수수료를 받습니다.",
+  etc: "제휴 링크를 통해 구매 시 일정액의 수수료를 받을 수 있습니다.",
+};
+const PLATFORM_NAME = { coupang: "쿠팡", toss: "토스", kakao: "카카오 선물하기", etc: "제휴" };
+
+const GRADE_EMOJI = { "초대박": "🔥🔥🔥", "대박": "🔥🔥", "특가": "🔥" };
+const HOOKS = {
+  "초대박": ["이 가격 실화?", "역대급 가격 떴어요", "지금 안 사면 후회각", "손이 먼저 나가는 가격"],
+  "대박": ["이 정도면 쟁여둘 타이밍", "가격 진짜 좋아요", "자주 안 오는 가격이에요", "오늘 특가 강추"],
+  "특가": ["필요하셨던 분들 지금이에요", "괜찮은 가격 나왔어요", "생필품 채우기 좋은 가격", "알뜰하게 챙겨가세요"],
+};
+const URGENT = ["⏰ 품절되면 끝! 서두르세요", "⏰ 오늘만 이 가격일 수 있어요", "⏰ 수량 한정이라 금방 빠져요", "⏰ 재고 있을 때 얼른!"];
+// 스레드 모집글 유형별 문구
+const TH = {
+  proofHook: ["{name} {price} 떴다", "{name} 이 가격 실화?", "방금 {name} {price}에 나온 거 봄", "{name} 지금 {price}임"],
+  proofClose: ["이런 거 매일 아침 카톡방에 올리는 중", "매일 이런 가격만 골라서 카톡방에 공유하고 있어", "이런 거 놓치기 싫어서 특가방 만들었음"],
+  empathyHook: [
+    "요즘 장보러 가면 3만원이 그냥 사라지지 않음?",
+    "요즘 물가 진짜 미친 거 같지 않아?",
+    "마트 갈 때마다 깜짝 놀라는 사람 나만 아니지?",
+    "월급은 그대로인데 장바구니만 비싸짐",
+  ],
+  empathyBody: [
+    "그래서 생필품은 이제 정가 주고 안 사기로 함",
+    "그래서 매일 아침 특가만 찾아보는 습관 생김",
+    "그래서 할인 뜰 때만 쟁여두는 중",
+  ],
+  listHook: ["이번 주 쟁여야 할 최저가 {n}개", "자취생이 지금 사두면 좋은 특가 {n}개", "오늘 찾은 생필품 최저가 {n}개 정리"],
+  reactionHook: ["어제 방에 올린 {name} 반응 미쳤음 ㅋㅋ", "{name} 올리자마자 방 난리남 ㅋㅋ", "어제 {name} 공유했더니 다들 건졌다고 함"],
+  reactionBody: ["못 본 사람들 아쉬워해서 여기도 올림", "이런 거 매일 올라오는데 아는 사람만 알더라", "매일 이 정도 가격만 골라서 올리는 중"],
+  questionHook: ["다들 {name} 얼마 주고 사요?", "{name} 보통 얼마에 사세요?", "{name} 이 가격이면 싼 거 맞나?"],
+  questionBody: ["나 오늘 {deal} 찾았는데 이거 싼 거 맞나", "오늘 {deal}에 나온 거 봤는데 이 정도면 쟁여도 됨?", "{deal}이면 평소보다 싼 거 같은데 어때요?"],
+  close: ["이런 거 매일 받아보고 싶으면 첫 댓글 👇", "매일 특가 받아보고 싶은 사람은 댓글 링크 👇", "궁금하면 첫 댓글에 방 링크 있어 👇"],
+  questionClose: ["싸게 사는 곳 궁금하면 댓글 참고 👇", "나는 여기서 매일 특가 받아봄 👇 댓글 참고"],
+  comment: [
+    "📌 매일 특가 올라오는 카톡방\n{room}{link}\n(무료, 언제든 나가도 돼요)",
+    "👇 매일 아침 생필품 특가 공유방\n{room}{link}",
+    "여기서 매일 올려요 🙌\n{room}{link}\n조용히 받아보기만 해도 돼요",
+  ],
+};
+const TH_TIPS = {
+  proof: "숫자 하나가 긴 설명보다 강해요. 상품 화면 캡처를 같이 올리면 더 좋아요.",
+  empathy: "공감으로 먼저 멈추게 하고, 카톡방을 해결책으로 보여주는 글이에요.",
+  list: "저장·공유가 잘 되는 유형이에요. 보관함 상품을 최대 5개까지 써요.",
+  reaction: "실제 카톡방 반응 캡처(닉네임 가리기)를 꼭 같이 올리세요. 없는 반응을 지어내면 신뢰를 잃어요.",
+  question: "댓글이 많이 달리면 노출이 늘어요. 댓글 단 분들께 방을 안내하기 좋아요.",
+};
+
+let state = { items: [], style: "basic", threadsSeed: 0, threadsType: "proof", settings: { roomName: "", roomLink: "", adTag: true, linkInBody: false } };
+
+// 확장 프로그램 안에서는 chrome.storage(토스·쿠팡 페이지와 공유), 파일로 열면 localStorage
+const IN_EXTENSION = typeof chrome !== "undefined" && !!(chrome.storage && chrome.storage.local);
+
+function applyLoaded(s) {
+  if (s && Array.isArray(s.items)) state = { ...state, ...s, settings: { ...state.settings, ...(s.settings || {}) } };
+}
+async function load() {
+  try {
+    if (IN_EXTENSION) {
+      const r = await chrome.storage.local.get(STORE);
+      applyLoaded(r[STORE]);
+    } else {
+      applyLoaded(JSON.parse(localStorage.getItem(STORE)));
+    }
+  } catch (e) { /* ignore broken storage */ }
+}
+function save() {
+  try {
+    if (IN_EXTENSION) chrome.storage.local.set({ [STORE]: state });
+    else localStorage.setItem(STORE, JSON.stringify(state));
+  } catch (e) { /* 저장이 막힌 환경에서도 생성기는 계속 동작 */ }
+}
+
+const won = (n) => Math.round(n).toLocaleString("ko-KR") + "원";
+const pick = (arr, seed) => arr[Math.abs(seed) % arr.length];
+
+function detectPlatform(link) {
+  const l = (link || "").toLowerCase();
+  if (l.includes("coupang")) return "coupang";
+  if (l.includes("toss")) return "toss";
+  if (l.includes("kakao")) return "kakao";
+  return "etc";
+}
+
+function discountPct(it) {
+  if (!it.orig || it.orig <= it.price) return 0;
+  return Math.round((1 - it.price / it.orig) * 100);
+}
+
+function gradeOf(it) {
+  if (it.grade && it.grade !== "auto") return it.grade;
+  const d = discountPct(it);
+  if (d >= 50) return "초대박";
+  if (d >= 30) return "대박";
+  return "특가";
+}
+
+function unitPriceText(it) {
+  if (!it.qty || it.qty <= 0) return "";
+  const total = it.price + (it.ship || 0);
+  const u = it.unit;
+  let per, label;
+  if (u === "g") { per = total / it.qty * 100; label = "100g당"; }
+  else if (u === "ml") { per = total / it.qty * 100; label = "100ml당"; }
+  else if (u === "kg") { per = total / it.qty; label = "1kg당"; }
+  else if (u === "L") { per = total / it.qty; label = "1L당"; }
+  else { per = total / it.qty; label = u + "당"; }
+  return `${label} ${won(per)}`;
+}
+
+function qtyText(it) { return it.qty ? `${it.qty}${it.unit}` : ""; }
+function shipText(it) { return it.ship > 0 ? `배송비 ${won(it.ship)}` : "무료배송"; }
+
+function priceLine(it) {
+  const d = discountPct(it);
+  let s = `💰 ${won(it.price)}`;
+  if (d > 0) s += ` (평소 ${won(it.orig)} → ${d}%↓)`;
+  return s;
+}
+
+function header(it) {
+  const lines = [];
+  if (state.settings.adTag) lines.push("[광고] " + DISCLOSURE[it.platform]);
+  else lines.push(DISCLOSURE[it.platform]);
+  return lines;
+}
+
+const NO_LINK = "(🔗 링크 만들기를 먼저 눌러주세요)";
+const linkOf = (it) => it.link || NO_LINK;
+
+function render(it, style) {
+  const g = gradeOf(it);
+  const emoji = GRADE_EMOJI[g];
+  const hook = pick(HOOKS[g], it.seed);
+  const unit = unitPriceText(it);
+  const L = [];
+
+  if (style === "short") {
+    L.push(...header(it));
+    L.push(`${emoji} ${it.name} ${won(it.price)}${unit ? ` (${unit})` : ""} ${linkOf(it)}`);
+    return L.join("\n");
+  }
+
+  L.push(...header(it), "");
+
+  if (style === "unit" && unit) {
+    L.push(`${emoji} ${unit} 실화?!`);
+    L.push(`📦 ${it.name}`);
+    L.push(`➡️ ${won(it.price)} / ${qtyText(it)} · ${shipText(it)}`);
+  } else {
+    L.push(`${emoji} [${g}] ${hook}`);
+    L.push(`📦 ${it.name}`);
+    L.push(priceLine(it));
+    if (unit) L.push(`🧮 ${unit} (${qtyText(it)})`);
+    L.push(`🚚 ${shipText(it)}`);
+  }
+  if (it.coupon) L.push(`🎟️ ${it.coupon}`);
+  if (it.comment) L.push(`💬 ${it.comment}`);
+  if (style === "urgent") L.push("", pick(URGENT, it.seed));
+  L.push(`👉 ${linkOf(it)}`);
+  return L.join("\n");
+}
+
+// 모음 메시지에는 제휴 링크가 있는 상품만 넣어요
+function renderAll() {
+  const ready = state.items.filter((i) => i.link);
+  if (!ready.length) return "";
+  const platforms = [...new Set(ready.map((i) => i.platform))];
+  const L = [];
+  platforms.forEach((p) => L.push((state.settings.adTag ? "[광고] " : "") + DISCLOSURE[p]));
+  L.push("", `🛒 ${state.settings.roomName ? state.settings.roomName + " " : ""}오늘의 특가 모음`, "");
+  ready.forEach((it, i) => {
+    const g = gradeOf(it);
+    const unit = unitPriceText(it);
+    const d = discountPct(it);
+    L.push(`${i + 1}. ${GRADE_EMOJI[g]} ${it.name}`);
+    L.push(`   ${won(it.price)}${d > 0 ? ` (${d}%↓)` : ""}${unit ? ` · ${unit}` : ""} · ${shipText(it)}`);
+    if (it.coupon) L.push(`   🎟️ ${it.coupon}`);
+    L.push(`   👉 ${it.link}`, "");
+  });
+  L.push("품절이 빠를 수 있어요. 필요하신 분들 얼른 챙기세요! 🙌");
+  return L.join("\n");
+}
+
+// 보관함에서 가장 매력적인 상품 (할인율 높은 순)
+function bestItem() {
+  if (!state.items.length) return null;
+  return [...state.items].sort((a, b) => discountPct(b) - discountPct(a))[0];
+}
+
+function fill(tpl, vars) { return tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? "")); }
+
+function roomLinkText() { return state.settings.roomLink || "(⚙️ 내 방 설정에 오픈채팅방 링크를 넣어주세요)"; }
+
+function renderThreads() {
+  const s = state.threadsSeed;
+  const type = state.threadsType;
+  const best = bestItem();
+  const v = best
+    ? { name: best.name, price: won(best.price), deal: unitPriceText(best) || won(best.price) }
+    : { name: "햇반 24개", price: "○○원", deal: "개당 ○○원" };
+  const L = [];
+
+  if (type === "proof") {
+    L.push(fill(pick(TH.proofHook, s), v));
+    if (best && unitPriceText(best)) L.push(`${unitPriceText(best)}이면 진짜 싼 거임`);
+    else if (best && discountPct(best) > 0) L.push(`평소 ${won(best.orig)}인데 ${discountPct(best)}% 빠짐`);
+    else L.push("이 가격 자주 안 나옴");
+    L.push(pick(TH.proofClose, s + 1));
+  } else if (type === "empathy") {
+    L.push(pick(TH.empathyHook, s), pick(TH.empathyBody, s + 1));
+    if (best) L.push(`오늘도 ${best.name} ${won(best.price)}에 나온 거 찾음`);
+  } else if (type === "list") {
+    const top = state.items.slice(0, 5);
+    L.push(fill(pick(TH.listHook, s), { n: top.length || 5 }), "");
+    if (top.length) {
+      top.forEach((it, i) => {
+        const unit = unitPriceText(it);
+        L.push(`${i + 1}. ${it.name} ${won(it.price)}${unit ? ` (${unit})` : ""}`);
+      });
+    } else {
+      L.push("(보관함에 상품을 담으면 여기에 목록이 채워져요)");
+    }
+  } else if (type === "reaction") {
+    L.push(fill(pick(TH.reactionHook, s), v), pick(TH.reactionBody, s + 1));
+  } else if (type === "question") {
+    L.push(fill(pick(TH.questionHook, s), v), fill(pick(TH.questionBody, s + 1), v));
+  }
+
+  if (state.settings.linkInBody) {
+    L.push("", type === "question" ? "나는 여기서 매일 특가 받아봄 👇" : "이런 거 매일 받아보고 싶으면 들어와 👇", roomLinkText());
+  } else {
+    L.push("", pick(type === "question" ? TH.questionClose : TH.close, s + 2));
+  }
+  return L.join("\n");
+}
+
+function renderThreadsComment() {
+  const room = state.settings.roomName ? state.settings.roomName + "\n" : "";
+  return fill(pick(TH.comment, state.threadsSeed), { room, link: roomLinkText() });
+}
+
+function draw() {
+  $("count").textContent = state.items.length + "개";
+  document.querySelectorAll("#styleTabs button").forEach((b) => b.classList.toggle("on", b.dataset.style === state.style));
+  const list = $("list");
+  list.innerHTML = "";
+  if (!state.items.length) {
+    list.innerHTML = '<div class="empty">왼쪽에서 상품을 담으면 여기에 홍보 글이 만들어져요.</div>';
+  }
+  state.items.forEach((it, idx) => {
+    const box = document.createElement("div");
+    box.className = "item";
+    const head = document.createElement("div");
+    head.className = "item-head";
+    const title = document.createElement("div");
+    const strong = document.createElement("strong");
+    strong.textContent = it.name;
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = `${PLATFORM_NAME[it.platform]} · ${gradeOf(it)}`;
+    title.append(strong, badge);
+    const warnBadge = (text) => {
+      const warn = document.createElement("span");
+      warn.className = "badge";
+      warn.style.background = "#fde2df";
+      warn.style.color = "#c0392b";
+      warn.textContent = text;
+      title.append(warn);
+    };
+    if (!it.link) warnBadge("🔗 제휴 링크 필요");
+    if (it.needsCheck || !it.price) warnBadge("⚠️ 가격 확인 필요 → ✏️ 수정");
+    if (editingIdx === idx) warnBadge("✏️ 수정 중");
+    const btns = document.createElement("div");
+    btns.className = "btns";
+    btns.style.marginTop = "0";
+    const mk = (txt, fn, cls) => { const b = document.createElement("button"); b.textContent = txt; if (cls) b.className = cls; b.onclick = fn; return b; };
+    if (!it.link && it.productUrl) btns.append(mk("🔗 링크 만들기", () => makeLink(it), "primary"));
+    if (CAN_SHARE && it.link) btns.append(mk("📤 공유", () => shareText(render(it, state.style)), "primary"));
+    btns.append(
+      mk("📋 복사", () => it.link ? copy(render(it, state.style)) : toast("먼저 🔗 링크 만들기를 해주세요"), it.link ? "primary" : ""),
+      mk("🎲 다른 문구", () => { it.seed++; save(); draw(); }),
+      mk("✏️ 수정", () => startEdit(idx)),
+      mk("삭제", () => { if (editingIdx === idx) cancelEdit(); state.items.splice(idx, 1); save(); draw(); }, "danger"),
+    );
+    head.append(title, btns);
+    const pre = document.createElement("pre");
+    pre.className = "out";
+    pre.textContent = render(it, state.style);
+    box.append(head, pre);
+    list.append(box);
+  });
+  document.querySelectorAll("#threadsTabs button").forEach((b) => b.classList.toggle("on", b.dataset.type === state.threadsType));
+  $("threadsTip").textContent = "💡 " + TH_TIPS[state.threadsType];
+  $("threadsOut").textContent = renderThreads();
+  $("threadsComment").textContent = renderThreadsComment();
+}
+
+function readForm() {
+  const num = (id) => { const v = parseFloat($(id).value); return isNaN(v) ? 0 : v; };
+  const link = $("link").value.trim();
+  const name = $("name").value.trim();
+  const price = num("price");
+  // 골드박스에서 담은 상품은 링크를 나중에 만들 수 있어서, 수정할 때는 링크가 비어 있어도 돼요
+  const editing = editingIdx !== null ? state.items[editingIdx] : null;
+  const linkOptional = !!(editing && editing.productUrl);
+  if ((!link && !linkOptional) || !name || !price) { toast("링크, 상품명, 판매가는 꼭 넣어주세요"); return null; }
+  const platform = $("platform").value === "auto" ? (link ? detectPlatform(link) : (editing ? editing.platform : "etc")) : $("platform").value;
+  return {
+    link, name, price, platform,
+    orig: num("orig"), qty: num("qty"), unit: $("unit").value, ship: num("ship"),
+    coupon: $("coupon").value.trim(), comment: $("comment").value.trim(),
+    grade: $("grade").value, seed: Math.floor(Math.random() * 1000),
+    needsCheck: false, needsLink: !link,
+  };
+}
+
+// ---------- 수정 (보관함에서 빼지 않고 그 자리에서 고쳐요) ----------
+let editingIdx = null;
+
+function startEdit(idx) {
+  editingIdx = idx;
+  fillForm(state.items[idx]);
+  $("addBtn").textContent = "수정 완료";
+  draw();
+}
+
+function cancelEdit() {
+  editingIdx = null;
+  $("addBtn").textContent = "보관함에 담기";
+}
+
+// ---------- 쿠팡 골드박스 상품 → 간편 링크 만들기 ----------
+const PENDING = "rangi-pending-link";
+const LINK_PAGE = "https://partners.coupang.com/#affiliate/ws/link-to-any-page";
+
+function makeLink(it) {
+  if (IN_EXTENSION) {
+    // 간편 링크 화면에서 확장 프로그램이 이 주소를 자동으로 넣고 [링크 생성]을 눌러줘요
+    chrome.storage.local.set({ [PENDING]: { productUrl: it.productUrl, name: it.name, at: Date.now() } }, () => {
+      window.open(LINK_PAGE, "_blank");
+    });
+  } else {
+    copy(it.productUrl);
+    toast("쿠팡 주소를 복사했어요. 간편 링크 화면에 붙여넣고 링크를 만든 뒤 ✏️ 수정으로 넣어주세요");
+    window.open(LINK_PAGE, "_blank");
+  }
+}
+
+function fillForm(it) {
+  $("link").value = it.link; $("name").value = it.name; $("price").value = it.price || "";
+  $("orig").value = it.orig || ""; $("qty").value = it.qty || ""; $("unit").value = it.unit;
+  $("ship").value = it.ship || ""; $("coupon").value = it.coupon; $("comment").value = it.comment;
+  $("grade").value = it.grade || "auto"; $("platform").value = it.platform;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ---------- 붙여넣기 / 휴대폰 공유로 담기 ----------
+// 토스 앱 공유 글은 "광고 문구 + 상품명 + 링크" 모양이에요. 링크·상품명·(있으면) 가격을 뽑아요
+function parseShared(text) {
+  const t = String(text || "");
+  const m = t.match(/https?:\/\/[^\s"'<>]+/);
+  const link = m ? m[0] : "";
+  const nums = [...t.matchAll(/(\d{1,3}(?:,\d{3})+|\d{3,})\s*원/g)]
+    .map((x) => parseInt(x[1].replace(/,/g, ""), 10))
+    .filter((n) => n >= 100);
+  const name = t
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s, i, a) => a.indexOf(s) === i) // 공유 제목·본문에 같은 줄이 겹치면 한 번만
+    .filter((s) => !link || !s.includes(link))
+    .filter((s) => !/수수료|\[광고\]|파트너스 활동|쉐어링크 활동/.test(s))
+    .filter((s) => !/^[\d,\s원%↓→()~-]+$/.test(s)) // 가격만 있는 줄은 상품명에서 빼요
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return { link, name, price: nums.length ? Math.min(...nums) : 0, orig: nums.length > 1 ? Math.max(...nums) : 0 };
+}
+
+// 상품명에서 수량/용량 뽑기: "햇반 210g, 24개" → 24개, "사과 3kg" → 3kg
+function qtyFromName(name) {
+  const counts = [...name.matchAll(/(\d+(?:\.\d+)?)\s*(개입|개|봉|팩|매|롤|캔|병|입)/g)];
+  if (counts.length) {
+    const m = counts[counts.length - 1];
+    return { qty: parseFloat(m[1]), unit: m[2] === "개입" || m[2] === "입" ? "개" : m[2] };
+  }
+  const weights = [...name.matchAll(/(\d+(?:\.\d+)?)\s*(kg|ml|g|l)\b/gi)];
+  if (weights.length) {
+    const m = weights[weights.length - 1];
+    const u = m[2].toLowerCase();
+    return { qty: parseFloat(m[1]), unit: u === "l" ? "L" : u };
+  }
+  return { qty: 0, unit: "개" };
+}
+
+// fallbackName: 공유 '제목'(예: "토스쇼핑")은 본문에 상품명이 없을 때만 써요
+function importText(text, fallbackName) {
+  const p = parseShared(text);
+  if (!p.name && fallbackName) p.name = String(fallbackName).trim();
+  if (!p.link && !p.name) { toast("링크나 상품명을 찾지 못했어요"); return; }
+  if (editingIdx !== null) { cancelEdit(); draw(); }
+  clearForm();
+  if (p.link) $("link").value = p.link;
+  if (p.name) $("name").value = p.name;
+  if (p.price) $("price").value = p.price;
+  if (p.orig > p.price) $("orig").value = p.orig;
+  const q = qtyFromName(p.name);
+  if (q.qty) { $("qty").value = q.qty; $("unit").value = q.unit; }
+  $("importText").value = "";
+  // 비어 있는 칸으로 바로 이동
+  const next = !p.link ? $("link") : !p.name ? $("name") : !p.price ? $("price") : $("addBtn");
+  next.scrollIntoView({ behavior: "smooth", block: "center" });
+  next.focus();
+  toast(p.price ? "채웠어요! 확인하고 [보관함에 담기]를 눌러주세요" : "채웠어요! 판매가를 넣고 [보관함에 담기]를 눌러주세요");
+}
+
+// ---------- 휴대폰에서 카톡 등으로 바로 공유 ----------
+const CAN_SHARE = !!navigator.share && matchMedia("(pointer: coarse)").matches;
+async function shareText(text) {
+  try { await navigator.share({ text }); }
+  catch (e) { if (e.name !== "AbortError") copy(text); }
+}
+
+function clearForm() {
+  ["link", "name", "price", "orig", "qty", "ship", "coupon", "comment"].forEach((id) => ($(id).value = ""));
+  $("grade").value = "auto"; $("platform").value = "auto"; $("unit").value = "개";
+  if (editingIdx !== null) { cancelEdit(); draw(); }
+}
+
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); }
+  catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.append(ta); ta.select(); document.execCommand("copy"); ta.remove();
+  }
+  toast("복사했어요! 카톡방에 붙여넣으세요");
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+// 이벤트 연결
+$("addBtn").onclick = () => {
+  const it = readForm();
+  if (!it) return;
+  if (editingIdx !== null && state.items[editingIdx]) {
+    const old = state.items[editingIdx];
+    state.items[editingIdx] = { ...old, ...it, seed: old.seed }; // 쿠팡 상품 주소 등은 그대로 두고 덮어써요
+    toast("수정했어요");
+  } else {
+    state.items.push(it);
+    toast("보관함에 담았어요");
+  }
+  save(); clearForm(); cancelEdit(); draw();
+};
+$("clearForm").onclick = clearForm;
+$("importBtn").onclick = () => importText($("importText").value);
+$("pasteBtn").onclick = async () => {
+  try {
+    const t = await navigator.clipboard.readText();
+    if (!t) return toast("복사한 내용이 없어요");
+    importText(t);
+  } catch (e) {
+    $("importText").focus();
+    toast("위 칸을 길게 눌러 붙여넣은 뒤 [아래에 채우기]를 눌러주세요");
+  }
+};
+$("shareAll").hidden = !CAN_SHARE;
+$("shareThreads").hidden = !CAN_SHARE;
+$("shareAll").onclick = () => {
+  const text = renderAll();
+  text ? shareText(text) : toast("제휴 링크가 있는 상품이 없어요");
+};
+$("shareThreads").onclick = () => shareText(renderThreads());
+$("copyAll").onclick = async () => {
+  if (!state.items.length) return toast("보관함이 비어 있어요");
+  const missing = state.items.filter((i) => !i.link).length;
+  if (missing === state.items.length) return toast("제휴 링크가 있는 상품이 없어요. 🔗 링크 만들기를 먼저 해주세요");
+  await copy(renderAll());
+  if (missing) toast(`복사했어요! 링크 없는 상품 ${missing}개는 빠졌어요`);
+};
+$("copyThreads").onclick = () => copy(renderThreads());
+$("copyThreadsBody").onclick = () => copy(renderThreads());
+$("copyThreadsComment").onclick = () => copy(renderThreadsComment());
+$("rerollThreads").onclick = () => { state.threadsSeed++; save(); draw(); };
+document.querySelectorAll("#threadsTabs button").forEach((b) => (b.onclick = () => { state.threadsType = b.dataset.type; save(); draw(); }));
+$("linkInBody").addEventListener("change", () => { state.settings.linkInBody = $("linkInBody").checked; save(); draw(); });
+$("clearAll").onclick = () => { if (state.items.length && confirm("보관함을 비울까요?")) { state.items = []; save(); draw(); } };
+document.querySelectorAll("#styleTabs button").forEach((b) => (b.onclick = () => { state.style = b.dataset.style; save(); draw(); }));
+$("link").addEventListener("input", () => { if ($("platform").value === "auto") $("platform").title = PLATFORM_NAME[detectPlatform($("link").value)]; });
+["roomName", "roomLink"].forEach((id) => $(id).addEventListener("input", () => { state.settings[id] = $(id).value.trim(); save(); draw(); }));
+$("adTag").addEventListener("change", () => { state.settings.adTag = $("adTag").checked; save(); draw(); });
+
+(async () => {
+  await load();
+  $("roomName").value = state.settings.roomName;
+  $("roomLink").value = state.settings.roomLink;
+  $("adTag").checked = state.settings.adTag;
+  $("linkInBody").checked = state.settings.linkInBody;
+  if (IN_EXTENSION) {
+    $("headerHint").textContent = "토스 쉐어링크·쿠팡 파트너스에서 [링크 발급/생성]을 누르면 상품이 여기로 자동으로 담겨요.";
+    // 토스·쿠팡 페이지에서 상품이 담기면 바로 화면에 반영
+    chrome.storage.onChanged.addListener((changes, area) => {
+      if (area === "local" && changes[STORE]) { applyLoaded(changes[STORE].newValue); draw(); }
+    });
+  }
+  draw();
+
+  // 휴대폰 토스 앱에서 [공유 → 랑이 특가]로 들어온 내용 받기 (generator.html?title=..&text=..&url=..)
+  const qs = new URLSearchParams(location.search);
+  const shared = ["text", "url"].map((k) => qs.get(k)).filter(Boolean).join("\n");
+  if (shared || qs.get("title")) {
+    history.replaceState(null, "", location.pathname);
+    importText(shared, qs.get("title"));
+  }
+
+  // 인터넷 주소로 열었을 때만 휴대폰 앱 설치 기능 켜기 (확장 프로그램·파일로 열 때는 안 씀)
+  if (location.protocol.startsWith("http") && "serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>

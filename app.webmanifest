@@ -1,0 +1,21 @@
+{
+  "name": "랑이 특가 생성기",
+  "short_name": "랑이 특가",
+  "description": "토스·쿠팡 제휴 링크로 카톡방·스레드 홍보 글을 만들어 줘요.",
+  "lang": "ko",
+  "start_url": "generator.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f5f2",
+  "theme_color": "#f2c300",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "generator.html",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  }
+}
