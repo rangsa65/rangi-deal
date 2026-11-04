@@ -64,6 +64,7 @@
     <a href="https://sharelink.toss.im/home" target="_blank" rel="noopener">🔵 토스 쉐어링크</a>
     <a href="https://partners.coupang.com/" target="_blank" rel="noopener">🟠 쿠팡 파트너스</a>
     <a href="https://pages.coupang.com/p/121237" target="_blank" rel="noopener">⏰ 쿠팡 골드박스</a>
+    <a href="https://www.threads.com/" target="_blank" rel="noopener">🧵 스레드</a>
   </nav>
 </header>
 
@@ -173,7 +174,8 @@
       <label>본문</label>
       <pre class="out" id="threadsOut"></pre>
       <div class="btns">
-        <button class="primary" id="copyThreadsBody">📋 본문 복사</button>
+        <button class="primary" id="postThreads">🧵 스레드에 바로 올리기</button>
+        <button id="copyThreadsBody">📋 본문 복사</button>
         <button class="primary" id="shareThreads" hidden>📤 본문 공유</button>
         <button id="rerollThreads">🎲 다른 문구로</button>
       </div>
@@ -746,6 +748,19 @@ $("copyAll").onclick = async () => {
 $("copyThreads").onclick = () => copy(renderThreads());
 $("copyThreadsBody").onclick = () => copy(renderThreads());
 $("copyThreadsComment").onclick = () => copy(renderThreadsComment());
+// 스레드 글쓰기 화면을 본문이 채워진 채로 열어요. [게시]는 직접 눌러요.
+// 첫 댓글(카톡방 링크)은 미리 복사해 두니까, 글을 올린 뒤 댓글에 붙여넣기만 하면 돼요.
+$("postThreads").onclick = async () => {
+  const body = renderThreads();
+  const comment = renderThreadsComment();
+  if (comment.trim()) {
+    try { await navigator.clipboard.writeText(comment); } catch (e) {}
+  }
+  window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body), "_blank");
+  toast(comment.trim()
+    ? "스레드가 열렸어요. [게시]를 누른 뒤, 첫 댓글은 복사돼 있으니 댓글 칸에 붙여넣으세요"
+    : "스레드가 열렸어요. 내용을 확인하고 [게시]를 눌러주세요");
+};
 $("rerollThreads").onclick = () => { state.threadsSeed++; save(); draw(); };
 document.querySelectorAll("#threadsTabs button").forEach((b) => (b.onclick = () => { state.threadsType = b.dataset.type; save(); draw(); }));
 $("linkInBody").addEventListener("change", () => { state.settings.linkInBody = $("linkInBody").checked; save(); draw(); });
