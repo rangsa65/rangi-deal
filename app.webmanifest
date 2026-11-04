@@ -1,6 +1,6 @@
 {
-  "name": "랑이 특가 생성기",
-  "short_name": "랑이 특가",
+  "name": "랑이 특가 자동화",
+  "short_name": "랑이 특가 자동화",
   "description": "토스·쿠팡 제휴 링크로 카톡방·스레드 홍보 글을 만들어 줘요.",
   "lang": "ko",
   "start_url": "generator.html",

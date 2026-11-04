@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>랑이 특가 생성기</title>
+<title>랑이 특가 자동화</title>
 <link rel="manifest" href="app.webmanifest">
 <meta name="theme-color" content="#f2c300">
 <link rel="icon" href="icons/icon-192.png">
@@ -54,7 +54,7 @@
 </head>
 <body>
 <header>
-  <h1>🛒 랑이 특가 생성기</h1>
+  <h1>🛒 랑이 특가 자동화</h1>
   <p>상품 정보만 넣으면 카톡방·스레드용 홍보 글을 만들어 줘요. 입력한 내용은 이 기기에만 저장돼요.</p>
   <p id="headerHint" style="font-weight:700"></p>
 </header>
@@ -700,7 +700,7 @@ $("adTag").addEventListener("change", () => { state.settings.adTag = $("adTag").
   }
   draw();
 
-  // 휴대폰 토스 앱에서 [공유 → 랑이 특가]로 들어온 내용 받기 (generator.html?title=..&text=..&url=..)
+  // 휴대폰 토스 앱에서 [공유 → 랑이 특가 자동화]로 들어온 내용 받기 (generator.html?title=..&text=..&url=..)
   const qs = new URLSearchParams(location.search);
   const shared = ["text", "url"].map((k) => qs.get(k)).filter(Boolean).join("\n");
   if (shared || qs.get("title")) {
