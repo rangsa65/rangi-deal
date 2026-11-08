@@ -92,9 +92,9 @@
         </ol>
         <h3>2. 카톡방에 올리기</h3>
         <ol>
-          <li>상품의 <b>[📋 사진+글 복사]</b>를 누르면 사진과 글이 한 번에 복사돼요. (여러 개는 <b>[📋 전체 모음 메시지 복사]</b> → 사진이 한 장으로 모여요)</li>
-          <li>카톡 입력칸에서 <b>Win+V</b> → 사진 골라 보내기, 이어서 <b>Ctrl+V</b> → 글 보내기.</li>
-          <li><b>Win+V</b>를 처음 누르면 [켜기]가 나와요. 한 번만 켜 두면 돼요. (카톡은 사진과 글이 원래 따로 보내져요)</li>
+          <li>상품의 <b>[📋 사진+글 복사]</b> → 사진이 먼저 복사돼요. (여러 개는 <b>[📋 전체 모음 메시지 복사]</b> → 사진이 한 장으로 모여요)</li>
+          <li>카톡 입력칸에 <b>Ctrl+V</b> → 사진 보내기.</li>
+          <li>이 앱 창을 한 번 누르면 <b>글이 자동으로 복사</b>돼요 → 카톡에 <b>Ctrl+V</b> → 보내기.</li>
         </ol>
         <h3>3. 스레드에 올리기</h3>
         <ol>
@@ -980,22 +980,32 @@ async function collagePng(items) {
   return new Promise((resolve) => c.toBlob(resolve, "image/png"));
 }
 
-// PC: 사진과 글을 한 번에 복사해요. 사진 → 글 순서로 복사돼서
-// 카톡·스레드에서 Ctrl+V 하면 글, Win+V(클립보드 기록)에서 바로 아래 사진을 고르면 사진이 붙어요.
+// PC: 사진 먼저 복사 → 카톡에 Ctrl+V로 사진 보내고 이 창으로 돌아오면 글이 저절로 복사돼요.
+// (클립보드에는 한 번에 하나만 들어가고, 카톡은 사진과 글을 따로 보내서 두 번에 나눠요)
+let pendingText = null, leftAfterPhoto = false;
 async function copyWithPhoto(items, text) {
   const withPhoto = items.filter((i) => i.photo || i.imgUrl);
   if (!withPhoto.length) return copy(text);
-  let photoOk = false;
   try {
     await navigator.clipboard.write([new ClipboardItem({ "image/png": collagePng(withPhoto) })]);
-    photoOk = true;
-    await new Promise((r) => setTimeout(r, 700)); // 클립보드 기록에 따로 남도록 잠깐 쉬어요
-  } catch (e) {}
-  await copy(text);
-  toast(photoOk
-    ? "📋 사진+글 복사 완료! 카톡 입력칸에서 Ctrl+V → 글 붙이기, Win+V → 사진 골라 붙이기 (Win+V가 처음이면 [켜기]를 눌러주세요)"
-    : "글만 복사했어요. 사진은 가져오지 못했어요", 8000);
+  } catch (e) {
+    await copy(text);
+    return toast("사진을 가져오지 못해서 글만 복사했어요. [📷 사진 바꾸기]로 사진을 직접 넣어주세요", 6000);
+  }
+  pendingText = text; leftAfterPhoto = false;
+  toast("🖼️ 사진 복사 완료! ① 카톡 입력칸에 Ctrl+V → 사진 보내기  ② 이 창을 다시 누르면 글이 자동으로 복사돼요 → 카톡에 Ctrl+V", 12000);
 }
+window.addEventListener("blur", () => { if (pendingText) leftAfterPhoto = true; });
+async function copyPendingText() {
+  if (!pendingText || !leftAfterPhoto) return;
+  const t = pendingText;
+  try { await navigator.clipboard.writeText(t); } catch (e) { return; } // 아직 창이 포커스가 없으면 다음 클릭 때 다시 해요
+  if (pendingText !== t) return;
+  pendingText = null; leftAfterPhoto = false;
+  toast("📋 이제 글이 복사됐어요! 카톡 입력칸에 Ctrl+V → 보내기", 6000);
+}
+window.addEventListener("focus", () => setTimeout(copyPendingText, 150));
+document.addEventListener("pointerdown", () => copyPendingText(), true);
 
 // 휴대폰: 사진과 글을 함께 공유 (카톡은 사진만 받는 경우가 있어서 글은 미리 복사해 둬요)
 async function shareItems(items, text) {
@@ -1099,7 +1109,7 @@ $("copyAll").onclick = async () => {
   if (missing === state.items.length) return toast("제휴 링크가 있는 상품이 없어요. 🔗 링크 만들기를 먼저 해주세요");
   if (!CAN_SHARE) await copyWithPhoto(state.items.filter((i) => i.link), renderAll());
   else await copy(renderAll());
-  if (missing) setTimeout(() => toast(`링크 없는 상품 ${missing}개는 빠졌어요`, 3000), CAN_SHARE ? 0 : 6000);
+  if (missing && CAN_SHARE) toast(`복사했어요! 링크 없는 상품 ${missing}개는 빠졌어요`, 3000);
 };
 const copyThreadsText = () => (!CAN_SHARE ? copyWithPhoto(threadsItems(), renderThreads()) : copy(renderThreads()));
 $("copyThreads").onclick = copyThreadsText;
