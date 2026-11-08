@@ -52,10 +52,14 @@
   .badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: #fff4bf; color: var(--accent-ink); margin-left: 6px; }
   pre.out { white-space: pre-wrap; word-break: break-all; background: #faf9f6; border: 1px dashed var(--line); border-radius: 8px; padding: 10px; margin: 0; font-family: inherit; font-size: 14px; line-height: 1.55; }
   .empty { color: var(--muted); font-size: 14px; text-align: center; padding: 24px 0; }
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 99px; font-size: 14px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 10px 16px; border-radius: 16px; font-size: 14px; line-height: 1.45; max-width: 90vw; width: max-content; text-align: center; z-index: 10; opacity: 0; transition: opacity .2s; pointer-events: none; }
   .toast.show { opacity: 1; }
   .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
   .tabs button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .item-body { display: flex; gap: 10px; align-items: flex-start; }
+  .item-body pre.out { flex: 1; min-width: 0; }
+  .thumb { width: 96px; height: 96px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); flex: none; background: #fff; }
+  @media (max-width: 860px) { .thumb { width: 72px; height: 72px; } }
 </style>
 </head>
 <body>
@@ -84,17 +88,24 @@
           <li><b>쿠팡 파트너스</b>: 상품 사진 위 <b>[링크 생성]</b> → 다음 화면 <b>[URL 복사]</b> → 자동으로 담겨요.</li>
           <li><b>쿠팡 골드박스</b>: 상품마다 붙은 <b>[🛒 담기]</b> → 이 앱에서 그 상품의 <b>[🔗 링크 만들기]</b> → 열린 화면에서 <b>[URL 복사]</b>.</li>
           <li>담은 상품은 2초 안에 이 앱 <b>② 보관함</b>에 나타나요. 같은 상품은 두 번 안 담겨요.</li>
+          <li><b>상품 사진도 자동으로 같이 담겨요.</b> 사진이 없거나 바꾸고 싶으면 <b>[📷 사진 넣기]</b>.</li>
         </ol>
         <h3>2. 카톡방에 올리기</h3>
         <ol>
-          <li>보관함에서 글 스타일을 고르고 <b>[📋 전체 모음 메시지 복사]</b> 또는 상품별 <b>[📋 복사]</b>.</li>
-          <li>카카오톡 특가방에 <b>Ctrl+V</b> 로 붙여넣고 보내요.</li>
+          <li>상품의 <b>[🖼️ 사진 복사]</b> → 카톡 특가방에 <b>Ctrl+V</b> → 사진 보내기.</li>
+          <li>이어서 <b>[📋 글 복사]</b> → <b>Ctrl+V</b> → 보내기. (여러 개는 <b>[📋 전체 모음 메시지 복사]</b>)</li>
         </ol>
         <h3>3. 스레드에 올리기</h3>
         <ol>
           <li>스레드 모집글에서 유형(가격 증거형·공감형…)을 고르고 <b>[🧵 스레드에 바로 올리기]</b>.</li>
-          <li>열린 스레드에서 내용 확인 후 <b>[게시]</b>.</li>
-          <li>올린 글의 댓글 칸에 <b>Ctrl+V</b> → 카톡방 링크가 첫 댓글로 들어가요. (미리 복사돼 있어요)</li>
+          <li>열린 스레드 글쓰기 칸에 <b>Ctrl+V</b> → 상품 사진이 붙어요. (사진이 있는 상품일 때)</li>
+          <li>내용 확인 후 <b>[게시]</b> → 이 앱 <b>[📋 첫 댓글 복사]</b> → 댓글 칸에 <b>Ctrl+V</b>.</li>
+        </ol>
+        <h3>4. 폴센트 (가격 많이 떨어진 쿠팡 상품)</h3>
+        <ol>
+          <li>폴센트에서 상품명·가격이 들어간 글을 복사해 이 화면에 <b>Ctrl+V</b> → 보관함에 담겨요.</li>
+          <li><b>[🔗 쿠팡에서 링크 만들기]</b> → 상품명이 복사된 채로 파트너스가 열려요 → 검색창에 <b>Ctrl+V</b> → 같은 상품 <b>[링크 생성] → [URL 복사]</b> → 자동으로 연결돼요.</li>
+          <li>폴센트 링크(fcnt.link)는 폴센트의 수익 링크라 쓰지 않아요. 꼭 내 쿠팡 링크로 바꿔서 올려요.</li>
         </ol>
         <h3>알아두기</h3>
         <ul>
@@ -110,16 +121,25 @@
           <li><b>토스 앱 (가장 편해요)</b>: 상품 → <b>공유</b> → 목록에서 <b>랑이 특가 자동화</b> → 상품명·링크가 채워지고 판매가 칸으로 이동 → 가격 넣고 <b>[보관함에 담기]</b>.</li>
           <li><b>쿠팡·토스 웹</b>: 맨 위 버튼으로 사이트 열기 → <b>[링크 생성 → URL 복사]</b> (토스는 <b>[링크 발급]</b>) → 이 앱 <b>📥 붙여넣기로 담기</b> 칸을 길게 눌러 <b>붙여넣기</b> → 자동으로 채워져요 → 가격 넣고 <b>[보관함에 담기]</b>.</li>
           <li>휴대폰에서는 가격이 자동으로 안 들어가요. 판매가(원래 가격도 있으면)를 직접 넣어주세요.</li>
+          <li><b>폴센트 앱 (가격 많이 떨어진 쿠팡 상품)</b>: 상품 → <b>공유</b> → <b>랑이 특가 자동화</b> → 상품명·가격이 보관함에 담겨요 → <b>[🔗 쿠팡에서 링크 만들기]</b> → 파트너스 검색창을 길게 눌러 <b>붙여넣기</b>(상품명이 복사돼 있어요) → 같은 상품 <b>[링크 생성] → [URL 복사]</b> → 이 앱으로 돌아와 <b>📥 붙여넣기 칸에 붙여넣기</b> → 그 상품에 내 링크가 연결돼요.</li>
+          <li>폴센트 링크(fcnt.link)는 폴센트의 수익 링크라 쓰지 않아요.</li>
         </ol>
-        <h3>2. 카톡방에 올리기</h3>
+        <h3>2. 상품 사진 넣기</h3>
         <ol>
-          <li>상품별 <b>[📤 공유]</b> 또는 보관함 <b>[📤 모음 메시지 공유]</b>.</li>
+          <li>상품의 <b>[📷 사진 넣기]</b> → 갤러리에서 상품 사진을 골라요.</li>
+          <li>사진은 쿠팡·토스·폴센트 앱에서 상품 사진을 길게 눌러 저장하거나 화면 캡처해 두면 돼요.</li>
+        </ol>
+        <h3>3. 카톡방에 올리기</h3>
+        <ol>
+          <li>상품별 <b>[📤 사진+글 공유]</b> 또는 보관함 <b>[📤 모음 메시지 공유]</b>.</li>
           <li>공유 목록에서 <b>카카오톡 → 내 특가방</b> 선택 → 보내기.</li>
+          <li>카톡에 사진만 갔으면, 글은 복사돼 있으니 대화창을 길게 눌러 <b>붙여넣기</b> → 보내기.</li>
         </ol>
-        <h3>3. 스레드에 올리기</h3>
+        <h3>4. 스레드에 올리기</h3>
         <ol>
-          <li><b>[🧵 스레드에 바로 올리기]</b> → 스레드 앱이 본문이 채워진 채로 열려요 → <b>[게시]</b>.</li>
-          <li>올린 글의 댓글 칸을 길게 눌러 <b>붙여넣기</b> → 카톡방 링크가 첫 댓글로 들어가요.</li>
+          <li><b>사진과 같이</b>: <b>[📤 사진+본문 공유]</b> → 공유 목록에서 <b>Threads</b> → <b>[게시]</b>.</li>
+          <li><b>글만</b>: <b>[🧵 스레드에 바로 올리기]</b> → 스레드 앱이 본문이 채워진 채로 열려요 → <b>[게시]</b>.</li>
+          <li>이 앱 <b>[📋 첫 댓글 복사]</b> → 올린 글의 댓글 칸을 길게 눌러 <b>붙여넣기</b> → 카톡방 링크가 첫 댓글로 들어가요.</li>
         </ol>
         <h3>알아두기</h3>
         <ul>
@@ -235,7 +255,7 @@
       <div class="btns">
         <button class="primary" id="postThreads">🧵 스레드에 바로 올리기</button>
         <button id="copyThreadsBody">📋 본문 복사</button>
-        <button class="primary" id="shareThreads" hidden>📤 본문 공유</button>
+        <button class="primary" id="shareThreads" hidden>📤 사진+본문 공유</button>
         <button id="rerollThreads">🎲 다른 문구로</button>
       </div>
       <label>첫 댓글 (카톡방 링크)</label>
@@ -248,6 +268,7 @@
 </main>
 
 <div class="toast" id="toast"></div>
+<input type="file" id="photoInput" accept="image/*" hidden>
 
 <script>
 const $ = (id) => document.getElementById(id);
@@ -347,7 +368,7 @@ function watchBridge() {
     const res = await extCall({ type: "get" });
     if (!res || !res.state) return;
     const j = JSON.stringify(res.state);
-    if (j !== lastBridgeJson) { lastBridgeJson = j; applyLoaded(res.state); draw(); }
+    if (j !== lastBridgeJson) { lastBridgeJson = j; applyLoaded(res.state); resolveAwaiting(); draw(); }
   }, 2000);
 }
 
@@ -365,13 +386,17 @@ async function load() {
   } catch (e) { /* ignore broken storage */ }
 }
 function save() {
+  let ok = true;
   try {
     if (IN_EXTENSION) chrome.storage.local.set({ [STORE]: state });
     else {
-      localStorage.setItem(STORE, JSON.stringify(state));
+      // 확장 프로그램과 연결돼 있으면 거기에 저장해요 (사진이 많아도 넉넉해요)
       if (BRIDGE) { lastBridgeJson = JSON.stringify(state); extCall({ type: "set", state }); }
+      try { localStorage.setItem(STORE, JSON.stringify(state)); }
+      catch (e) { ok = BRIDGE; if (!BRIDGE) toast("저장 공간이 꽉 찼어요. 지난 상품을 지우면 사진을 더 넣을 수 있어요", 4000); }
     }
   } catch (e) { /* 저장이 막힌 환경에서도 생성기는 계속 동작 */ }
+  return ok;
 }
 
 const won = (n) => Math.round(n).toLocaleString("ko-KR") + "원";
@@ -578,19 +603,34 @@ function draw() {
     btns.className = "btns";
     btns.style.marginTop = "0";
     const mk = (txt, fn, cls) => { const b = document.createElement("button"); b.textContent = txt; if (cls) b.className = cls; b.onclick = fn; return b; };
-    if (!it.link && it.productUrl) btns.append(mk("🔗 링크 만들기", () => makeLink(it), "primary"));
-    if (CAN_SHARE && it.link) btns.append(mk("📤 공유", () => shareText(render(it, state.style)), "primary"));
+    const hasPhoto = !!(it.photo || it.imgUrl);
+    if (!it.link && (it.productUrl || it.searchName)) btns.append(mk(it.productUrl ? "🔗 링크 만들기" : "🔗 쿠팡에서 링크 만들기", () => makeLink(it), "primary"));
+    if (CAN_SHARE && it.link) btns.append(mk(hasPhoto ? "📤 사진+글 공유" : "📤 공유", () => shareItems([it], render(it, state.style)), "primary"));
+    if (!CAN_SHARE && hasPhoto) btns.append(mk("🖼️ 사진 복사", () => copyPhoto(it)));
     btns.append(
-      mk("📋 복사", () => it.link ? copy(render(it, state.style)) : toast("먼저 🔗 링크 만들기를 해주세요"), it.link ? "primary" : ""),
+      mk("📋 " + (hasPhoto && !CAN_SHARE ? "글 복사" : "복사"), () => it.link ? copy(render(it, state.style)) : toast("먼저 🔗 링크 만들기를 해주세요"), it.link ? "primary" : ""),
       mk("🎲 다른 문구", () => { it.seed++; save(); draw(); }),
+      mk(hasPhoto ? "📷 사진 바꾸기" : "📷 사진 넣기", () => pickPhoto(it)),
       mk("✏️ 수정", () => startEdit(idx)),
       mk("삭제", () => { if (editingIdx === idx) cancelEdit(); state.items.splice(idx, 1); save(); draw(); }, "danger"),
     );
     head.append(title, btns);
+    const body = document.createElement("div");
+    body.className = "item-body";
+    if (hasPhoto) {
+      const img = document.createElement("img");
+      img.className = "thumb";
+      img.alt = "";
+      img.referrerPolicy = "no-referrer";
+      img.src = it.photo || it.imgUrl;
+      img.onerror = () => img.remove();
+      body.append(img);
+    }
     const pre = document.createElement("pre");
     pre.className = "out";
     pre.textContent = render(it, state.style);
-    box.append(head, pre);
+    body.append(pre);
+    box.append(head, body);
     list.append(box);
   });
   document.querySelectorAll("#threadsTabs button").forEach((b) => b.classList.toggle("on", b.dataset.type === state.threadsType));
@@ -638,6 +678,18 @@ const PENDING = "rangi-pending-link";
 const LINK_PAGE = "https://partners.coupang.com/#affiliate/ws/link-to-any-page";
 
 function makeLink(it) {
+  // 폴센트에서 온 상품: 쿠팡 주소를 모르니 상품명으로 쿠팡 파트너스에서 찾아요
+  if (!it.productUrl && it.searchName) {
+    const t = findSame(it) || it;
+    t.awaitLink = Date.now();
+    save();
+    navigator.clipboard.writeText(it.searchName).catch(() => {});
+    window.open("https://partners.coupang.com/", "_blank");
+    toast(CAN_SHARE
+      ? "상품명을 복사했어요. 파트너스 검색창에 붙여넣고 같은 상품의 [링크 생성] → [URL 복사] → 이 앱에 돌아와 붙여넣으면 연결돼요"
+      : "상품명을 복사했어요. 파트너스 검색창에 Ctrl+V → 같은 상품의 [링크 생성] → [URL 복사] 하면 자동으로 연결돼요", 7000);
+    return;
+  }
   const pending = { productUrl: it.productUrl, name: it.name, at: Date.now() };
   if (IN_EXTENSION) {
     // 간편 링크 화면에서 확장 프로그램이 이 주소를 자동으로 넣고 [링크 생성]을 눌러줘요
@@ -700,9 +752,111 @@ function qtyFromName(name) {
   return { qty: 0, unit: "개" };
 }
 
+// ---------- 폴센트 앱에서 공유받기 ----------
+// 폴센트 링크(fcnt.link)는 폴센트의 수익 링크라서 절대 쓰지 않아요. 상품명·가격만 받아서 내 쿠팡 링크를 새로 만들어요.
+const FALLCENT_RE = /fcnt\.link|fallcent|폴센트/i;
+const AFF_COUPANG = /link\.coupang\.com|coupa\.ng/i;
+
+function parseFallcent(text) {
+  const t = String(text || "");
+  const nums = [...t.matchAll(/(\d{1,3}(?:,\d{3})+|\d{3,})\s*원/g)]
+    .map((x) => parseInt(x[1].replace(/,/g, ""), 10))
+    .filter((n) => n >= 100);
+  const pm = t.match(/▼\s*(\d{1,2})\s*%/) || t.match(/(\d{1,2})\s*%\s*(?:하락|↓|인하|할인|떨어)/);
+  const pct = pm ? parseInt(pm[1], 10) : 0;
+  const price = nums.length ? Math.min(...nums) : 0;
+  let orig = nums.length > 1 ? Math.max(...nums) : 0;
+  if (!orig && price && pct) orig = Math.round(price / (1 - pct / 100) / 10) * 10;
+  const clean = (s) => s
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/(\d{1,3}(?:,\d{3})+|\d{3,})\s*원/g, "")
+    .replace(/[▼↓]\s*\d+\s*%/g, "")
+    .replace(/^\s*(\[[^\]]*\]\s*)+/, "")
+    .replace(/(역대급 타이밍|역대 최저가|최저가 알림|로켓배송|로켓프레시|로켓직구|로켓그로스|판매자로켓|폴센트(에서)?)\s*/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const name = t.split(/\r?\n/)
+    .filter((s) => !/다운로드|앱에서|확인해\s*보세요|가격\s*변동|그래프/.test(s))
+    .map(clean)
+    .filter((s) => s.length >= 4 && !/^[\d,\s원%↓▼→()~:×xX.-]+$/.test(s))
+    .sort((a, b) => b.length - a.length)[0] || "";
+  return { name, price, orig: orig > price ? orig : 0 };
+}
+
+function importFallcent(all) {
+  const f = parseFallcent(all);
+  $("importText").value = "";
+  if (!f.name) {
+    clearForm();
+    $("platform").value = "coupang";
+    $("name").focus();
+    toast("폴센트 상품명을 못 찾았어요. 상품명을 직접 넣어주세요", 4000);
+    return;
+  }
+  if (state.items.some((i) => !i.link && i.searchName === f.name)) { toast("이미 담긴 상품이에요"); return; }
+  const q = qtyFromName(f.name);
+  state.items.push({
+    link: "", name: f.name, price: f.price, orig: f.orig, platform: "coupang",
+    qty: q.qty, unit: q.unit, ship: 0, coupon: "", comment: "", grade: "auto",
+    seed: Math.floor(Math.random() * 1000), needsCheck: !f.price, needsLink: true,
+    searchName: f.name, from: "fallcent",
+  });
+  save(); draw();
+  $("list").scrollIntoView({ behavior: "smooth", block: "start" });
+  toast("📉 폴센트 상품을 담았어요! [🔗 쿠팡에서 링크 만들기]로 내 링크를 만들어 주세요", 5000);
+}
+
+// 상품명이 얼마나 비슷한지 (0~1)
+function similarity(a, b) {
+  const tok = (s) => new Set(String(s).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").split(" ").filter((w) => w.length >= 2));
+  const A = tok(a), B = tok(b);
+  if (!A.size || !B.size) return 0;
+  let n = 0;
+  A.forEach((w) => { if (B.has(w)) n++; });
+  return n / Math.min(A.size, B.size);
+}
+
+// 쿠팡 파트너스에서 복사한 내 링크를 붙여넣으면 → 링크를 기다리던 폴센트 상품에 연결
+function attachWaitingLink(p) {
+  const w = state.items.filter((i) => !i.link && i.awaitLink).sort((a, b) => b.awaitLink - a.awaitLink)[0];
+  if (!w || !AFF_COUPANG.test(p.link)) return false;
+  if (p.name && p.name.length > 6 && similarity(p.name, w.name) < 0.3) return false;
+  w.link = p.link; w.needsLink = false; delete w.awaitLink;
+  $("importText").value = "";
+  save(); draw();
+  toast(`🔗 링크 연결 완료: ${w.name}`, 3000);
+  return true;
+}
+
+// PC: 확장 프로그램이 파트너스에서 같은 상품을 새로 담았으면, 기다리던 폴센트 상품과 합쳐요
+function resolveAwaiting() {
+  let changed = false;
+  for (const w of state.items.filter((i) => !i.link && i.searchName)) {
+    const wi = state.items.indexOf(w);
+    const t = state.items.find((x, j) => j > wi && x.link && x.platform === "coupang" && similarity(x.name, w.name) >= 0.6);
+    if (!t) continue;
+    if (!t.photo && w.photo) t.photo = w.photo;
+    if (!t.imgUrl && w.imgUrl) t.imgUrl = w.imgUrl;
+    if (!t.orig && w.orig > t.price) t.orig = w.orig;
+    state.items.splice(state.items.indexOf(w), 1);
+    changed = true;
+  }
+  if (changed) { save(); toast("🔗 폴센트 상품에 내 쿠팡 링크를 연결했어요", 3000); }
+  return changed;
+}
+
+// 보관함이 다시 불러와져도 같은 상품을 찾아요
+function findSame(it) {
+  return state.items.includes(it) ? it
+    : state.items.find((x) => x.seed === it.seed && x.name === it.name && x.price === it.price) || null;
+}
+
 // fallbackName: 공유 '제목'(예: "토스쇼핑")은 본문에 상품명이 없을 때만 써요
 function importText(text, fallbackName) {
+  const all = [fallbackName, text].filter(Boolean).join("\n");
+  if (FALLCENT_RE.test(all)) return importFallcent(all);
   const p = parseShared(text);
+  if (p.link && attachWaitingLink(p)) return;
   if (!p.name && fallbackName) p.name = String(fallbackName).trim();
   if (!p.link && !p.name) { toast("링크나 상품명을 찾지 못했어요"); return; }
   if (editingIdx !== null) { cancelEdit(); draw(); }
@@ -728,6 +882,105 @@ async function shareText(text) {
   catch (e) { if (e.name !== "AbortError") copy(text); }
 }
 
+// ---------- 상품 사진 ----------
+// 사진은 가로·세로 720px 안으로 줄여서 저장해요 (상품 하나에 100KB 안팎)
+async function fileToPhoto(blob) {
+  const bmp = await createImageBitmap(blob);
+  const k = Math.min(1, 720 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(bmp.width * k));
+  c.height = Math.max(1, Math.round(bmp.height * k));
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(bmp, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.82);
+}
+
+let photoTarget = null;
+function pickPhoto(it) {
+  photoTarget = it;
+  $("photoInput").value = "";
+  $("photoInput").click();
+}
+$("photoInput").addEventListener("change", async () => {
+  const f = $("photoInput").files[0];
+  if (!f || !photoTarget) return;
+  try {
+    const url = await fileToPhoto(f);
+    const t = findSame(photoTarget);
+    photoTarget = null;
+    if (!t) return toast("상품을 찾지 못했어요. 다시 해주세요");
+    t.photo = url;
+    if (save()) toast("📷 사진을 넣었어요");
+    draw();
+  } catch (e) { toast("사진을 읽지 못했어요. 다른 사진으로 해주세요"); }
+});
+
+// 공유·복사용 사진 파일. 직접 넣은 사진 → 없으면 자동으로 가져온 상품 사진
+async function photoBlob(it) {
+  if (it.photo) return (await fetch(it.photo)).blob();
+  if (!it.imgUrl) return null;
+  if (BRIDGE) {
+    // 쇼핑몰 사진은 다른 사이트에서 직접 못 가져와서, 크롬 확장 프로그램이 대신 받아줘요
+    const r = await extCall({ type: "img", url: it.imgUrl });
+    if (r && r.dataUrl) {
+      const t = findSame(it);
+      if (t) { t.photo = r.dataUrl; save(); }
+      return (await fetch(r.dataUrl)).blob();
+    }
+  }
+  try { const r = await fetch(it.imgUrl, { referrerPolicy: "no-referrer" }); if (r.ok) return await r.blob(); } catch (e) {}
+  return null;
+}
+
+async function toPng(blob) {
+  if (!blob) throw new Error("no photo");
+  const bmp = await createImageBitmap(blob);
+  const c = document.createElement("canvas");
+  c.width = bmp.width; c.height = bmp.height;
+  c.getContext("2d").drawImage(bmp, 0, 0);
+  return new Promise((resolve) => c.toBlob(resolve, "image/png"));
+}
+
+// PC: 사진을 복사해서 카톡·스레드에 Ctrl+V 로 붙일 수 있게
+async function copyPhoto(it, quiet) {
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": photoBlob(it).then(toPng) })]);
+    if (!quiet) toast("🖼️ 사진을 복사했어요! 카톡 창에 Ctrl+V → 보낸 뒤 [📋 글 복사]로 글도 붙여넣으세요", 5000);
+    return true;
+  } catch (e) {
+    if (!quiet) toast("사진을 가져오지 못했어요. 📷 사진 바꾸기로 직접 넣어주세요", 4000);
+    return false;
+  }
+}
+
+// 휴대폰: 사진과 글을 함께 공유 (카톡은 사진만 받는 경우가 있어서 글은 미리 복사해 둬요)
+async function shareItems(items, text) {
+  const files = [];
+  for (const it of items) {
+    if (files.length >= 10) break;
+    try {
+      const b = await photoBlob(it);
+      if (b) files.push(new File([b], `rangi-${files.length + 1}.jpg`, { type: b.type || "image/jpeg" }));
+    } catch (e) { /* 사진 없이 공유 */ }
+  }
+  if (!files.length || !navigator.canShare || !navigator.canShare({ files })) return shareText(text);
+  try { await navigator.clipboard.writeText(text); } catch (e) {}
+  try {
+    await navigator.share({ files, text });
+    toast("글도 복사돼 있어요. 사진만 보내졌으면 대화창을 길게 눌러 붙여넣기 하세요", 5000);
+  } catch (e) {
+    if (e.name !== "AbortError") shareText(text);
+  }
+}
+
+// 스레드 글에 들어가는 상품 (리스트형은 최대 5개, 나머지는 가장 좋은 상품 1개)
+function threadsItems() {
+  if (state.threadsType === "list") return state.items.slice(0, 5);
+  const b = bestItem();
+  return b ? [b] : [];
+}
+
 function clearForm() {
   ["link", "name", "price", "orig", "qty", "ship", "coupon", "comment"].forEach((id) => ($(id).value = ""));
   $("grade").value = "auto"; $("platform").value = "auto"; $("unit").value = "개";
@@ -744,9 +997,9 @@ async function copy(text) {
 }
 
 let toastTimer;
-function toast(msg) {
+function toast(msg, ms) {
   const t = $("toast"); t.textContent = msg; t.classList.add("show");
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), ms || 1800);
 }
 
 // 이벤트 연결
@@ -794,9 +1047,9 @@ $("shareAll").hidden = !CAN_SHARE;
 $("shareThreads").hidden = !CAN_SHARE;
 $("shareAll").onclick = () => {
   const text = renderAll();
-  text ? shareText(text) : toast("제휴 링크가 있는 상품이 없어요");
+  text ? shareItems(state.items.filter((i) => i.link), text) : toast("제휴 링크가 있는 상품이 없어요");
 };
-$("shareThreads").onclick = () => shareText(renderThreads());
+$("shareThreads").onclick = () => shareItems(threadsItems(), renderThreads());
 $("copyAll").onclick = async () => {
   if (!state.items.length) return toast("보관함이 비어 있어요");
   const missing = state.items.filter((i) => !i.link).length;
@@ -812,13 +1065,21 @@ $("copyThreadsComment").onclick = () => copy(renderThreadsComment());
 $("postThreads").onclick = async () => {
   const body = renderThreads();
   const comment = renderThreadsComment();
-  if (comment.trim()) {
+  // PC: 사진이 있으면 사진을 복사해 둬요 → 스레드 글쓰기 칸에 Ctrl+V 하면 사진이 붙어요
+  const withPhoto = !CAN_SHARE ? threadsItems().find((i) => i.photo || i.imgUrl) : null;
+  // 새 창이 열리면 이 화면이 포커스를 잃어 복사가 막히니까, 복사를 먼저 끝내고 열어요
+  const photoCopied = withPhoto ? await copyPhoto(withPhoto, true) : false;
+  if (!photoCopied && comment.trim()) {
     try { await navigator.clipboard.writeText(comment); } catch (e) {}
   }
   window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body), "_blank");
-  toast(comment.trim()
-    ? "스레드가 열렸어요. [게시]를 누른 뒤, 첫 댓글은 복사돼 있으니 댓글 칸에 붙여넣으세요"
-    : "스레드가 열렸어요. 내용을 확인하고 [게시]를 눌러주세요");
+  if (photoCopied) {
+    toast("스레드가 열렸어요. 글쓰기 칸에 Ctrl+V 하면 상품 사진이 붙어요. 게시 후 첫 댓글은 [📋 첫 댓글 복사]로 달아주세요", 7000);
+  } else {
+    toast(comment.trim()
+      ? "스레드가 열렸어요. [게시]를 누른 뒤, 첫 댓글은 복사돼 있으니 댓글 칸에 붙여넣으세요"
+      : "스레드가 열렸어요. 내용을 확인하고 [게시]를 눌러주세요", 4000);
+  }
 };
 $("rerollThreads").onclick = () => { state.threadsSeed++; save(); draw(); };
 document.querySelectorAll("#threadsTabs button").forEach((b) => (b.onclick = () => { state.threadsType = b.dataset.type; save(); draw(); }));
@@ -853,7 +1114,7 @@ $("adTag").addEventListener("change", () => { state.settings.adTag = $("adTag").
     $("headerHint").textContent = "토스 쉐어링크·쿠팡 파트너스에서 [링크 발급/생성]을 누르면 상품이 여기로 자동으로 담겨요.";
     // 토스·쿠팡 페이지에서 상품이 담기면 바로 화면에 반영
     chrome.storage.onChanged.addListener((changes, area) => {
-      if (area === "local" && changes[STORE]) { applyLoaded(changes[STORE].newValue); draw(); }
+      if (area === "local" && changes[STORE]) { applyLoaded(changes[STORE].newValue); resolveAwaiting(); draw(); }
     });
   }
   draw();
