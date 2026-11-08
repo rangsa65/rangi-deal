@@ -92,14 +92,15 @@
         </ol>
         <h3>2. 카톡방에 올리기</h3>
         <ol>
-          <li>상품의 <b>[📋 사진+글 복사]</b> → 사진이 먼저 복사돼요. (여러 개는 <b>[📋 전체 모음 메시지 복사]</b> → 사진이 한 장으로 모여요)</li>
+          <li>상품의 <b>[💬 카톡용 사진+글 복사]</b> → 사진이 먼저 복사돼요. (여러 개는 <b>[💬 카톡용 전체 모음 복사]</b> → 사진이 한 장으로 모여요)</li>
           <li>카톡 입력칸에 <b>Ctrl+V</b> → 사진 보내기.</li>
           <li>이 앱 창을 한 번 누르면 <b>글이 자동으로 복사</b>돼요 → 카톡에 <b>Ctrl+V</b> → 보내기.</li>
         </ol>
         <h3>3. 스레드에 올리기</h3>
         <ol>
-          <li>스레드 모집글에서 유형(가격 증거형·공감형…)을 고르고 <b>[🧵 스레드에 바로 올리기]</b>.</li>
-          <li>열린 스레드 글쓰기 칸에 <b>Ctrl+V</b> → 상품 사진이 붙어요. (사진이 있는 상품일 때)</li>
+          <li><b>🧵 스레드용</b> 칸에서 유형(가격 증거형·공감형…)을 고르고 <b>[🧵 스레드용 사진+글 복사]</b> → 사진이 먼저 복사돼요.</li>
+          <li>스레드 글쓰기 칸에 <b>Ctrl+V</b> → 사진 붙이기 → 이 앱 창을 한 번 누르면 글이 복사돼요 → 다시 <b>Ctrl+V</b>.</li>
+          <li>또는 <b>[🧵 스레드에 바로 올리기]</b> → 글이 채워진 글쓰기 창이 열려요 → <b>Ctrl+V</b> 하면 사진이 붙어요.</li>
           <li>내용 확인 후 <b>[게시]</b> → 이 앱 <b>[📋 첫 댓글 복사]</b> → 댓글 칸에 <b>Ctrl+V</b>.</li>
         </ol>
         <h3>4. 폴센트 (가격 많이 떨어진 쿠팡 상품)</h3>
@@ -132,13 +133,13 @@
         </ol>
         <h3>3. 카톡방에 올리기</h3>
         <ol>
-          <li>상품별 <b>[📤 사진+글 공유]</b> 또는 보관함 <b>[📤 모음 메시지 공유]</b>.</li>
+          <li>상품별 <b>[📤 카톡용 사진+글 공유]</b> 또는 <b>[📤 카톡용 전체 모음 공유]</b>.</li>
           <li>공유 목록에서 <b>카카오톡 → 내 특가방</b> 선택 → 보내기.</li>
           <li>카톡에 사진만 갔으면, 글은 복사돼 있으니 대화창을 길게 눌러 <b>붙여넣기</b> → 보내기.</li>
         </ol>
         <h3>4. 스레드에 올리기</h3>
         <ol>
-          <li><b>사진과 같이</b>: <b>[📤 사진+본문 공유]</b> → 공유 목록에서 <b>Threads</b> → <b>[게시]</b>.</li>
+          <li><b>사진과 같이</b>: <b>[📤 스레드용 사진+글 공유]</b> → 공유 목록에서 <b>Threads</b> → <b>[게시]</b>.</li>
           <li><b>글만</b>: <b>[🧵 스레드에 바로 올리기]</b> → 스레드 앱이 본문이 채워진 채로 열려요 → <b>[게시]</b>.</li>
           <li>이 앱 <b>[📋 첫 댓글 복사]</b> → 올린 글의 댓글 칸을 길게 눌러 <b>붙여넣기</b> → 카톡방 링크가 첫 댓글로 들어가요.</li>
         </ol>
@@ -225,7 +226,8 @@
 
   <div>
     <section class="card">
-      <h2>② 보관함 <span id="count" class="badge">0개</span></h2>
+      <h2>💬 카톡방용 · 보관함 <span id="count" class="badge">0개</span></h2>
+      <p class="hint">여기 버튼은 모두 <b>카톡 특가방</b>에 올리는 글이에요. 스레드 글은 아래 <b>🧵 스레드용</b> 칸에서 만들어요.</p>
       <div class="tabs" id="styleTabs">
         <button data-style="basic" class="on">기본형</button>
         <button data-style="unit">단가 강조형</button>
@@ -234,15 +236,15 @@
       </div>
       <div id="list"></div>
       <div class="btns">
-        <button class="primary" id="copyAll">📋 전체 모음 메시지 복사</button>
-        <button class="primary" id="shareAll" hidden>📤 모음 메시지 공유</button>
-        <button id="copyThreads">🧵 스레드 모집글 복사</button>
+        <button class="primary" id="copyAll">💬 카톡용 전체 모음 복사</button>
+        <button class="primary" id="shareAll" hidden>📤 카톡용 전체 모음 공유</button>
         <button class="danger" id="clearAll">보관함 비우기</button>
       </div>
     </section>
 
     <section class="card">
-      <h2>🧵 스레드 모집글</h2>
+      <h2>🧵 스레드용 · 모집글</h2>
+      <p class="hint">여기 버튼은 모두 <b>스레드</b>에 올리는 글이에요.</p>
       <div class="tabs" id="threadsTabs">
         <button data-type="proof" class="on">① 가격 증거형</button>
         <button data-type="empathy">② 공감형</button>
@@ -254,9 +256,10 @@
       <label>본문</label>
       <pre class="out" id="threadsOut"></pre>
       <div class="btns">
-        <button class="primary" id="postThreads">🧵 스레드에 바로 올리기</button>
-        <button id="copyThreadsBody">📋 본문 복사</button>
-        <button class="primary" id="shareThreads" hidden>📤 사진+본문 공유</button>
+        <button class="primary" id="copyThreadsPhoto">🧵 스레드용 사진+글 복사</button>
+        <button class="primary" id="shareThreads" hidden>📤 스레드용 사진+글 공유</button>
+        <button id="postThreads">🧵 스레드에 바로 올리기</button>
+        <button id="copyThreadsBody">📝 글만 복사</button>
         <button id="rerollThreads">🎲 다른 문구로</button>
       </div>
       <label>첫 댓글 (카톡방 링크)</label>
@@ -606,9 +609,9 @@ function draw() {
     const mk = (txt, fn, cls) => { const b = document.createElement("button"); b.textContent = txt; if (cls) b.className = cls; b.onclick = fn; return b; };
     const hasPhoto = !!(it.photo || it.imgUrl);
     if (!it.link && (it.productUrl || it.searchName)) btns.append(mk(it.productUrl ? "🔗 링크 만들기" : "🔗 쿠팡에서 링크 만들기", () => makeLink(it), "primary"));
-    if (CAN_SHARE && it.link) btns.append(mk(hasPhoto ? "📤 사진+글 공유" : "📤 공유", () => shareItems([it], render(it, state.style)), "primary"));
+    if (CAN_SHARE && it.link) btns.append(mk(hasPhoto ? "📤 카톡용 사진+글 공유" : "📤 카톡용 공유", () => shareItems([it], render(it, state.style)), "primary"));
     const pcPhoto = !CAN_SHARE && hasPhoto;
-    if (pcPhoto && it.link) btns.append(mk("📋 사진+글 복사", () => copyWithPhoto([it], render(it, state.style)), "primary"));
+    if (pcPhoto && it.link) btns.append(mk("💬 카톡용 사진+글 복사", () => copyWithPhoto([it], render(it, state.style)), "primary"));
     if (pcPhoto) btns.append(mk("🖼️ 사진만", () => copyPhoto(it)));
     btns.append(
       mk(pcPhoto ? "📝 글만" : "📋 복사", () => it.link ? copy(render(it, state.style)) : toast("먼저 🔗 링크 만들기를 해주세요"), it.link && !pcPhoto ? "primary" : ""),
@@ -949,7 +952,7 @@ async function toPng(blob) {
 async function copyPhoto(it, quiet) {
   try {
     await navigator.clipboard.write([new ClipboardItem({ "image/png": photoBlob(it).then(toPng) })]);
-    if (!quiet) toast("🖼️ 사진을 복사했어요! 카톡 창에 Ctrl+V → 보낸 뒤 [📋 글 복사]로 글도 붙여넣으세요", 5000);
+    if (!quiet) toast("🖼️ 사진을 복사했어요! 입력칸에 Ctrl+V → 그다음 [📝 글만]으로 글도 붙여넣으세요", 5000);
     return true;
   } catch (e) {
     if (!quiet) toast("사진을 가져오지 못했어요. 📷 사진 바꾸기로 직접 넣어주세요", 4000);
@@ -993,7 +996,7 @@ async function copyWithPhoto(items, text) {
     return toast("사진을 가져오지 못해서 글만 복사했어요. [📷 사진 바꾸기]로 사진을 직접 넣어주세요", 6000);
   }
   pendingText = text; leftAfterPhoto = false;
-  toast("🖼️ 사진 복사 완료! ① 카톡 입력칸에 Ctrl+V → 사진 보내기  ② 이 창을 다시 누르면 글이 자동으로 복사돼요 → 카톡에 Ctrl+V", 12000);
+  toast("🖼️ 사진 복사 완료! ① 입력칸에 Ctrl+V → 사진 붙이기  ② 이 창을 다시 누르면 글이 자동으로 복사돼요 → 다시 Ctrl+V", 12000);
 }
 window.addEventListener("blur", () => { if (pendingText) leftAfterPhoto = true; });
 async function copyPendingText() {
@@ -1002,7 +1005,7 @@ async function copyPendingText() {
   try { await navigator.clipboard.writeText(t); } catch (e) { return; } // 아직 창이 포커스가 없으면 다음 클릭 때 다시 해요
   if (pendingText !== t) return;
   pendingText = null; leftAfterPhoto = false;
-  toast("📋 이제 글이 복사됐어요! 카톡 입력칸에 Ctrl+V → 보내기", 6000);
+  toast("📋 이제 글이 복사됐어요! 입력칸에 Ctrl+V 하세요", 6000);
 }
 window.addEventListener("focus", () => setTimeout(copyPendingText, 150));
 document.addEventListener("pointerdown", () => copyPendingText(), true);
@@ -1111,9 +1114,9 @@ $("copyAll").onclick = async () => {
   else await copy(renderAll());
   if (missing && CAN_SHARE) toast(`복사했어요! 링크 없는 상품 ${missing}개는 빠졌어요`, 3000);
 };
-const copyThreadsText = () => (!CAN_SHARE ? copyWithPhoto(threadsItems(), renderThreads()) : copy(renderThreads()));
-$("copyThreads").onclick = copyThreadsText;
-$("copyThreadsBody").onclick = copyThreadsText;
+$("copyThreadsPhoto").hidden = CAN_SHARE;
+$("copyThreadsPhoto").onclick = () => copyWithPhoto(threadsItems(), renderThreads());
+$("copyThreadsBody").onclick = () => copy(renderThreads());
 $("copyThreadsComment").onclick = () => copy(renderThreadsComment());
 // 스레드 글쓰기 화면을 본문이 채워진 채로 열어요. [게시]는 직접 눌러요.
 // 첫 댓글(카톡방 링크)은 미리 복사해 두니까, 글을 올린 뒤 댓글에 붙여넣기만 하면 돼요.
