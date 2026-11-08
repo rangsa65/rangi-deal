@@ -92,8 +92,9 @@
         </ol>
         <h3>2. 카톡방에 올리기</h3>
         <ol>
-          <li>상품의 <b>[🖼️ 사진 복사]</b> → 카톡 특가방에 <b>Ctrl+V</b> → 사진 보내기.</li>
-          <li>이어서 <b>[📋 글 복사]</b> → <b>Ctrl+V</b> → 보내기. (여러 개는 <b>[📋 전체 모음 메시지 복사]</b>)</li>
+          <li>상품의 <b>[📋 사진+글 복사]</b>를 누르면 사진과 글이 한 번에 복사돼요. (여러 개는 <b>[📋 전체 모음 메시지 복사]</b> → 사진이 한 장으로 모여요)</li>
+          <li>카톡 입력칸에서 <b>Win+V</b> → 사진 골라 보내기, 이어서 <b>Ctrl+V</b> → 글 보내기.</li>
+          <li><b>Win+V</b>를 처음 누르면 [켜기]가 나와요. 한 번만 켜 두면 돼요. (카톡은 사진과 글이 원래 따로 보내져요)</li>
         </ol>
         <h3>3. 스레드에 올리기</h3>
         <ol>
@@ -606,9 +607,11 @@ function draw() {
     const hasPhoto = !!(it.photo || it.imgUrl);
     if (!it.link && (it.productUrl || it.searchName)) btns.append(mk(it.productUrl ? "🔗 링크 만들기" : "🔗 쿠팡에서 링크 만들기", () => makeLink(it), "primary"));
     if (CAN_SHARE && it.link) btns.append(mk(hasPhoto ? "📤 사진+글 공유" : "📤 공유", () => shareItems([it], render(it, state.style)), "primary"));
-    if (!CAN_SHARE && hasPhoto) btns.append(mk("🖼️ 사진 복사", () => copyPhoto(it)));
+    const pcPhoto = !CAN_SHARE && hasPhoto;
+    if (pcPhoto && it.link) btns.append(mk("📋 사진+글 복사", () => copyWithPhoto([it], render(it, state.style)), "primary"));
+    if (pcPhoto) btns.append(mk("🖼️ 사진만", () => copyPhoto(it)));
     btns.append(
-      mk("📋 " + (hasPhoto && !CAN_SHARE ? "글 복사" : "복사"), () => it.link ? copy(render(it, state.style)) : toast("먼저 🔗 링크 만들기를 해주세요"), it.link ? "primary" : ""),
+      mk(pcPhoto ? "📝 글만" : "📋 복사", () => it.link ? copy(render(it, state.style)) : toast("먼저 🔗 링크 만들기를 해주세요"), it.link && !pcPhoto ? "primary" : ""),
       mk("🎲 다른 문구", () => { it.seed++; save(); draw(); }),
       mk(hasPhoto ? "📷 사진 바꾸기" : "📷 사진 넣기", () => pickPhoto(it)),
       mk("✏️ 수정", () => startEdit(idx)),
@@ -954,6 +957,46 @@ async function copyPhoto(it, quiet) {
   }
 }
 
+// 여러 상품 사진을 한 장으로 모아요 (클립보드에는 사진이 한 장만 들어가서)
+async function collagePng(items) {
+  const bmps = [];
+  for (const it of items) {
+    if (bmps.length >= 6) break;
+    if (!(it.photo || it.imgUrl)) continue;
+    try { const b = await photoBlob(it); if (b) bmps.push(await createImageBitmap(b)); } catch (e) {}
+  }
+  if (!bmps.length) throw new Error("no photo");
+  const cols = bmps.length === 1 ? 1 : bmps.length <= 4 ? 2 : 3;
+  const rows = Math.ceil(bmps.length / cols), T = bmps.length === 1 ? 720 : 360, G = 8;
+  const c = document.createElement("canvas");
+  c.width = cols * T + (cols + 1) * G; c.height = rows * T + (rows + 1) * G;
+  const g = c.getContext("2d");
+  g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+  bmps.forEach((b, i) => {
+    const x = G + (i % cols) * (T + G), y = G + Math.floor(i / cols) * (T + G);
+    const k = Math.min(T / b.width, T / b.height), w = b.width * k, h = b.height * k;
+    g.drawImage(b, x + (T - w) / 2, y + (T - h) / 2, w, h);
+  });
+  return new Promise((resolve) => c.toBlob(resolve, "image/png"));
+}
+
+// PC: 사진과 글을 한 번에 복사해요. 사진 → 글 순서로 복사돼서
+// 카톡·스레드에서 Ctrl+V 하면 글, Win+V(클립보드 기록)에서 바로 아래 사진을 고르면 사진이 붙어요.
+async function copyWithPhoto(items, text) {
+  const withPhoto = items.filter((i) => i.photo || i.imgUrl);
+  if (!withPhoto.length) return copy(text);
+  let photoOk = false;
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": collagePng(withPhoto) })]);
+    photoOk = true;
+    await new Promise((r) => setTimeout(r, 700)); // 클립보드 기록에 따로 남도록 잠깐 쉬어요
+  } catch (e) {}
+  await copy(text);
+  toast(photoOk
+    ? "📋 사진+글 복사 완료! 카톡 입력칸에서 Ctrl+V → 글 붙이기, Win+V → 사진 골라 붙이기 (Win+V가 처음이면 [켜기]를 눌러주세요)"
+    : "글만 복사했어요. 사진은 가져오지 못했어요", 8000);
+}
+
 // 휴대폰: 사진과 글을 함께 공유 (카톡은 사진만 받는 경우가 있어서 글은 미리 복사해 둬요)
 async function shareItems(items, text) {
   const files = [];
@@ -1054,11 +1097,13 @@ $("copyAll").onclick = async () => {
   if (!state.items.length) return toast("보관함이 비어 있어요");
   const missing = state.items.filter((i) => !i.link).length;
   if (missing === state.items.length) return toast("제휴 링크가 있는 상품이 없어요. 🔗 링크 만들기를 먼저 해주세요");
-  await copy(renderAll());
-  if (missing) toast(`복사했어요! 링크 없는 상품 ${missing}개는 빠졌어요`);
+  if (!CAN_SHARE) await copyWithPhoto(state.items.filter((i) => i.link), renderAll());
+  else await copy(renderAll());
+  if (missing) setTimeout(() => toast(`링크 없는 상품 ${missing}개는 빠졌어요`, 3000), CAN_SHARE ? 0 : 6000);
 };
-$("copyThreads").onclick = () => copy(renderThreads());
-$("copyThreadsBody").onclick = () => copy(renderThreads());
+const copyThreadsText = () => (!CAN_SHARE ? copyWithPhoto(threadsItems(), renderThreads()) : copy(renderThreads()));
+$("copyThreads").onclick = copyThreadsText;
+$("copyThreadsBody").onclick = copyThreadsText;
 $("copyThreadsComment").onclick = () => copy(renderThreadsComment());
 // 스레드 글쓰기 화면을 본문이 채워진 채로 열어요. [게시]는 직접 눌러요.
 // 첫 댓글(카톡방 링크)은 미리 복사해 두니까, 글을 올린 뒤 댓글에 붙여넣기만 하면 돼요.
