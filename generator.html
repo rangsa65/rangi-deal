@@ -342,7 +342,9 @@ let state = { items: [], style: "basic", threadsSeed: 0, threadsType: "proof", s
 const IN_EXTENSION = typeof chrome !== "undefined" && !!(chrome.storage && chrome.storage.local);
 
 // 인터넷 주소(PC 바탕화면 앱)로 열어도, PC 크롬에 확장 프로그램이 있으면 그 보관함을 같이 써요
-const EXT_ID = "pheogimfhmdccikmcbpghdbjekkklfbh";
+// 내 확장 프로그램, 지인용 확장 프로그램(고정 번호) 둘 다 연결돼요
+const EXT_IDS = ["pheogimfhmdccikmcbpghdbjekkklfbh", "mjglbjdbhbcjgbhmbebbmhhenbjnplmi"];
+let EXT_ID = EXT_IDS[0];
 let BRIDGE = false;
 let lastBridgeJson = "";
 function extCall(msg) {
@@ -357,7 +359,12 @@ function extCall(msg) {
 }
 async function connectBridge() {
   if (IN_EXTENSION || typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.sendMessage) return false;
-  const res = await extCall({ type: "get" });
+  let res = null;
+  for (const id of EXT_IDS) {
+    EXT_ID = id;
+    res = await extCall({ type: "get" });
+    if (res && res.ok) break;
+  }
   if (!res || !res.ok) return false;
   BRIDGE = true;
   // 이 화면에만 담겨 있던 상품은 확장 프로그램 보관함으로 옮겨요
