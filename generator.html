@@ -253,6 +253,8 @@
         <button data-type="question">⑤ 질문·참여형</button>
       </div>
       <p class="hint" id="threadsTip"></p>
+      <label>같이 올라갈 사진</label>
+      <div id="threadsPhotos" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
       <label>본문</label>
       <pre class="out" id="threadsOut"></pre>
       <div class="btns">
@@ -641,6 +643,25 @@ function draw() {
   });
   document.querySelectorAll("#threadsTabs button").forEach((b) => b.classList.toggle("on", b.dataset.type === state.threadsType));
   $("threadsTip").textContent = "💡 " + TH_TIPS[state.threadsType];
+  // 스레드 글에 같이 올라갈 사진 미리보기
+  const tp = $("threadsPhotos");
+  tp.replaceChildren();
+  const tItems = threadsItems();
+  tItems.forEach((it) => {
+    if (it.photo || it.imgUrl) {
+      const img = document.createElement("img");
+      img.className = "thumb"; img.alt = ""; img.referrerPolicy = "no-referrer";
+      img.src = it.photo || it.imgUrl; img.title = it.name || "";
+      img.onerror = () => img.remove();
+      tp.append(img);
+    } else {
+      const b = document.createElement("button");
+      b.textContent = "📷 " + (it.name || "상품").slice(0, 12) + " 사진 넣기";
+      b.onclick = () => pickPhoto(it);
+      tp.append(b);
+    }
+  });
+  if (!tItems.length) tp.textContent = "보관함에 상품을 담으면 여기에 사진이 나와요";
   $("threadsOut").textContent = renderThreads();
   $("threadsComment").textContent = renderThreadsComment();
 }
