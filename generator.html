@@ -253,6 +253,10 @@
         <button data-type="question">⑤ 질문·참여형</button>
       </div>
       <p class="hint" id="threadsTip"></p>
+      <div id="threadsItemBox">
+        <label>스레드에 쓸 상품</label>
+        <select id="threadsItem"></select>
+      </div>
       <label>같이 올라갈 사진</label>
       <div id="threadsPhotos" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
       <label>본문</label>
@@ -516,10 +520,15 @@ function renderAll() {
   return L.join("\n");
 }
 
-// 보관함에서 가장 매력적인 상품 (할인율 높은 순)
+// 스레드 글에 쓸 상품: 직접 고른 상품, 안 골랐으면 가장 최근에 담은 상품
+const itemKey = (it) => it.link || it.searchName || it.name || "";
 function bestItem() {
   if (!state.items.length) return null;
-  return [...state.items].sort((a, b) => discountPct(b) - discountPct(a))[0];
+  if (state.threadsKey) {
+    const found = state.items.find((i) => itemKey(i) === state.threadsKey);
+    if (found) return found;
+  }
+  return state.items[state.items.length - 1];
 }
 
 function fill(tpl, vars) { return tpl.replace(/\{(\w+)\}/g, (_, k) => (vars[k] ?? "")); }
@@ -545,7 +554,7 @@ function renderThreads() {
     L.push(pick(TH.empathyHook, s), pick(TH.empathyBody, s + 1));
     if (best) L.push(`오늘도 ${best.name} ${won(best.price)}에 나온 거 찾음`);
   } else if (type === "list") {
-    const top = state.items.slice(0, 5);
+    const top = state.items.slice(-5).reverse(); // 최근에 담은 5개
     L.push(fill(pick(TH.listHook, s), { n: top.length || 5 }), "");
     if (top.length) {
       top.forEach((it, i) => {
@@ -643,6 +652,23 @@ function draw() {
   });
   document.querySelectorAll("#threadsTabs button").forEach((b) => b.classList.toggle("on", b.dataset.type === state.threadsType));
   $("threadsTip").textContent = "💡 " + TH_TIPS[state.threadsType];
+  // 새 상품이 담기면 스레드 글도 그 상품으로 바뀌어요
+  if (draw.lastCount !== undefined && state.items.length > draw.lastCount) state.threadsKey = null;
+  draw.lastCount = state.items.length;
+  // 스레드에 쓸 상품 고르기 (리스트형은 최근 5개를 써서 숨겨요)
+  const sel = $("threadsItem");
+  sel.replaceChildren();
+  const auto = document.createElement("option");
+  auto.value = ""; auto.textContent = "🆕 방금 담은 상품 (자동)";
+  sel.append(auto);
+  [...state.items].reverse().forEach((it) => {
+    const o = document.createElement("option");
+    o.value = itemKey(it);
+    o.textContent = `${it.name || "상품"} · ${won(it.price)}`;
+    sel.append(o);
+  });
+  sel.value = state.items.some((i) => itemKey(i) === state.threadsKey) ? state.threadsKey : "";
+  $("threadsItemBox").hidden = state.threadsType === "list" || !state.items.length;
   // 스레드 글에 같이 올라갈 사진 미리보기
   const tp = $("threadsPhotos");
   tp.replaceChildren();
@@ -1053,7 +1079,7 @@ async function shareItems(items, text) {
 
 // 스레드 글에 들어가는 상품 (리스트형은 최대 5개, 나머지는 가장 좋은 상품 1개)
 function threadsItems() {
-  if (state.threadsType === "list") return state.items.slice(0, 5);
+  if (state.threadsType === "list") return state.items.slice(-5).reverse();
   const b = bestItem();
   return b ? [b] : [];
 }
@@ -1160,7 +1186,8 @@ $("postThreads").onclick = async () => {
       : "스레드가 열렸어요. 내용을 확인하고 [게시]를 눌러주세요", 4000);
   }
 };
-$("rerollThreads").onclick = () => { state.threadsSeed++; save(); draw(); };
+$("threadsItem").onchange = (e) => { state.threadsKey = e.target.value || null; save(); draw(); };
+$("rerollThreads").onclick =() => { state.threadsSeed++; save(); draw(); };
 document.querySelectorAll("#threadsTabs button").forEach((b) => (b.onclick = () => { state.threadsType = b.dataset.type; save(); draw(); }));
 $("linkInBody").addEventListener("change", () => { state.settings.linkInBody = $("linkInBody").checked; save(); draw(); });
 $("clearAll").onclick = () => { if (state.items.length && confirm("보관함을 비울까요?")) { state.items = []; save(); draw(); } };
