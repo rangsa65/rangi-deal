@@ -246,6 +246,7 @@
       <h2>🧵 스레드용 · 모집글</h2>
       <p class="hint">여기 버튼은 모두 <b>스레드</b>에 올리는 글이에요.</p>
       <div class="tabs" id="threadsTabs">
+        <button data-type="info">💡 정보형 (홍보 없음)</button>
         <button data-type="recruit">📣 방 모집형 (상품 없이)</button>
         <button data-type="proof" class="on">① 가격 증거형</button>
         <button data-type="empathy">② 공감형</button>
@@ -330,6 +331,19 @@ const TH = {
     "이거 알려줘도 되나 싶은데 🤫\n\n같은 물건도\n언제 사느냐에 따라\n가격이 진짜 많이 달라\n\n그래서 할인 크게 들어간 타이밍만\n골라서 알려주는 방을 운영하고 있어\n\n광고 도배 없이\n괜찮은 가격만 딱딱 올려\n\n조용히 들어와서 보기만 해도 돼!\n이런 정보는 아는 사람만 챙겨가는 거야",
     "다들 휴지 30롤 얼마 주고 사? 🧻\n\n나는 이거 비싸게 산 거 알고 나서\n충격받고 특가만 찾아보기 시작함 ㅋㅋ\n\n이제는 아예\n특가 모아보는 핫딜방까지 운영 중이야\n\n생필품, 먹거리, 가전까지\n'이건 사야 돼' 싶은 가격만 올려\n\n댓글로 너네는 얼마에 사는지 알려줘 👇",
   ],
+  // 정보형: 홍보·링크 없이 바로 써먹는 절약 정보 (계정 초반 노출용)
+  info: [
+    "휴지 살 때 '몇 롤'만 보고 사면 손해야 🧻\n\n롤 수가 같아도\n한 롤 길이가 다 달라\n\n30m짜리 30롤이랑\n20m짜리 30롤은 완전 다른 거임\n\n살 때 꼭 '총 길이(m)' 보고\n1m당 가격으로 비교해 봐\n\n이거 알고 나서 휴지 고르는 기준 바뀜 ㅋㅋ",
+    "대용량이 무조건 싸다?\n이거 생각보다 자주 틀려 😳\n\n1+1이나 소용량 여러 개 묶음이\n대용량보다 100ml당 더 싼 경우 꽤 많아\n\n살 때 상품 페이지에 있는\n'100ml당 / 1개당 가격' 꼭 확인해 봐\n\n이거 하나만 봐도 장보기 비용 확 줄어",
+    "세제는 용량보다\n'몇 번 쓸 수 있는지'로 비교해야 해 🧺\n\n농축 세제는 한 번에 조금만 써서\n용량이 작아도 오래 가거든\n\n뒷면에 1회 사용량 적혀 있으니까\n총 용량 ÷ 1회 사용량 = 사용 횟수\n\n이걸로 비교하면 진짜 싼 게 보여",
+    "쿠팡 가격 하루에도 여러 번 바뀌는 거 알았어? 👀\n\n어제 산 거 오늘 보니까\n3천 원 싸져 있어서 현타 옴 ㅋㅋ\n\n급한 거 아니면\n장바구니에 담아두고 며칠 지켜보는 거 추천\n\n생필품은 특히\n가격 오르내림이 꽤 커",
+    "쿠팡 '골드박스' 아는 사람? 🎁\n\n매일 바뀌는 하루 특가인데\n생필품도 은근 자주 올라와\n\n아침에 한 번 훑어보는 습관 들이면\n생각보다 많이 아껴\n\n나는 커피 마시면서 보는 게 루틴이 됨 ☕",
+    "쿠팡 '반품마켓' 써본 사람? 📦\n\n단순 변심으로 반품된 상품을\n싸게 파는 곳인데\n\n박스만 뜯긴 새 상품도 꽤 있어\n\n가전이나 주방용품 살 때\n한 번씩 들러보면 득템할 때 있음 ㅋㅋ",
+    "한 달 생필품 얼마 쓰는지 계산해 본 적 있어? 🧾\n\n나 한 번 해봤다가 깜짝 놀람\n\n휴지, 세제, 생수, 샴푸만 해도\n생각보다 금액이 꽤 크더라\n\n그 뒤로 생필품은\n'떨어지기 전에, 쌀 때' 사는 걸로 바꿈\n\n다들 한 달에 얼마 정도 써?",
+    "생필품 중에 이건 무조건\n쌀 때 쟁인다 하는 거 있어? 🙋\n\n나는 휴지랑 생수\n\n너네는 뭐야?\n댓글로 알려줘 👇",
+    "특가라서 샀는데\n알고 보니 평소랑 가격 똑같았던 적 있음? 😂\n\n'최대 70% 할인' 이런 문구만 보고\n샀다가 당한 적 있어서\n\n이제는 할인율 말고\n'원래 얼마였는지'를 꼭 확인해\n\n할인율보다 최종 가격이 중요함!",
+    "생필품 싸게 사는 체크리스트 📌\n\n✔️ 1개당 / 100ml당 가격 비교\n✔️ 휴지는 총 길이(m)로 비교\n✔️ 할인율보다 최종 가격 확인\n✔️ 급하지 않으면 장바구니에 담고 기다리기\n✔️ 떨어지기 전에, 쌀 때 미리 사기\n\n저장해두고 장볼 때 써먹어!",
+  ],
   recruitClose: [
     "핫딜방 궁금한 친구들은 프로필 확인해 봐!",
     "궁금한 사람은 첫 댓글에 방 링크 있어 👇",
@@ -345,7 +359,9 @@ const TH = {
   ],
 };
 const RECRUIT_NAMES = ["가격 비교 후킹", "물가 공감", "품절 아쉬움", "아침 루틴", "비밀 공유", "질문으로 댓글 유도"];
+const INFO_NAMES = ["휴지 고르는 법", "대용량 함정", "세제 비교법", "쿠팡 가격 변동", "골드박스", "반품마켓", "한 달 생필품 비용", "질문 (댓글 유도)", "할인율 함정", "체크리스트 (저장 유도)"];
 const TH_TIPS = {
+  info: "홍보·링크 없는 정보 글이에요. 계정 초반 1~2주는 이것만 올리고, 다른 사람 글에 댓글도 꾸준히 달아주세요. 주제 태그는 생활꿀팁·절약·살림 중 하나를 달아요.",
   recruit: "상품 없이 방 자체를 궁금하게 만드는 글이에요. 🎲 다른 문구로를 누르면 6가지 스타일이 바뀌어요. 프로필에 카톡방 링크를 꼭 걸어두세요.",
   proof: "숫자 하나가 긴 설명보다 강해요. 상품 화면 캡처를 같이 올리면 더 좋아요.",
   empathy: "공감으로 먼저 멈추게 하고, 카톡방을 해결책으로 보여주는 글이에요.",
@@ -569,6 +585,7 @@ function renderThreads() {
     : { name: "햇반 24개", price: "○○원", deal: "개당 ○○원" };
   const L = [];
 
+  if (type === "info") return pick(TH.info, s); // 홍보 문구·링크 없이 정보만
   if (type === "recruit") {
     L.push(pick(TH.recruit, s));
     if (state.settings.linkInBody) L.push("", "👇 핫딜방 바로가기", roomLinkText());
@@ -610,6 +627,7 @@ function renderThreads() {
 }
 
 function renderThreadsComment() {
+  if (state.threadsType === "info") return ""; // 정보형은 링크 댓글 없이
   const room = state.settings.roomName ? state.settings.roomName + "\n" : "";
   return fill(pick(TH.comment, state.threadsSeed), { room, link: roomLinkText() });
 }
@@ -682,8 +700,9 @@ function draw() {
     list.append(box);
   });
   document.querySelectorAll("#threadsTabs button").forEach((b) => b.classList.toggle("on", b.dataset.type === state.threadsType));
-  $("threadsTip").textContent = "💡 " + (state.threadsType === "recruit"
-    ? `지금 스타일: ${RECRUIT_NAMES[state.threadsSeed % RECRUIT_NAMES.length]} · ` : "") + TH_TIPS[state.threadsType];
+  const styleNames = state.threadsType === "recruit" ? RECRUIT_NAMES : state.threadsType === "info" ? INFO_NAMES : null;
+  $("threadsTip").textContent = "💡 " + (styleNames
+    ? `지금 글: ${styleNames[Math.abs(state.threadsSeed) % styleNames.length]} · ` : "") + TH_TIPS[state.threadsType];
   // 새 상품이 담기면 스레드 글도 그 상품으로 바뀌어요
   if (draw.lastCount !== undefined && state.items.length > draw.lastCount) state.threadsKey = null;
   draw.lastCount = state.items.length;
@@ -700,7 +719,7 @@ function draw() {
     sel.append(o);
   });
   sel.value = state.items.some((i) => itemKey(i) === state.threadsKey) ? state.threadsKey : "";
-  $("threadsItemBox").hidden = state.threadsType === "list" || state.threadsType === "recruit" || !state.items.length;
+  $("threadsItemBox").hidden = ["list", "recruit", "info"].includes(state.threadsType) || !state.items.length;
   // 스레드 글에 같이 올라갈 사진 미리보기
   const tp = $("threadsPhotos");
   tp.replaceChildren();
@@ -720,9 +739,10 @@ function draw() {
     }
   });
   if (state.threadsType === "recruit") tp.textContent = "방 모집글은 상품 사진 없이 올려요. 카톡방 캡처(닉네임 가리기)를 붙이면 더 좋아요";
+  else if (state.threadsType === "info") tp.textContent = "정보 글은 사진 없이 올려도 돼요. 직접 찍은 생필품 사진을 붙이면 더 좋아요";
   else if (!tItems.length) tp.textContent = "보관함에 상품을 담으면 여기에 사진이 나와요";
   $("threadsOut").textContent = renderThreads();
-  $("threadsComment").textContent = renderThreadsComment();
+  $("threadsComment").textContent = renderThreadsComment() || "(정보형은 첫 댓글에 카톡방 링크를 달지 않아요. 홍보 없는 글이어야 노출이 잘 돼요)";
 }
 
 function readForm() {
@@ -1112,7 +1132,7 @@ async function shareItems(items, text) {
 
 // 스레드 글에 들어가는 상품 (리스트형은 최대 5개, 나머지는 가장 좋은 상품 1개)
 function threadsItems() {
-  if (state.threadsType === "recruit") return [];
+  if (state.threadsType === "recruit" || state.threadsType === "info") return [];
   if (state.threadsType === "list") return state.items.slice(-5).reverse();
   const b = bestItem();
   return b ? [b] : [];
@@ -1198,7 +1218,7 @@ $("copyAll").onclick = async () => {
 $("copyThreadsPhoto").hidden = CAN_SHARE;
 $("copyThreadsPhoto").onclick = () => copyWithPhoto(threadsItems(), renderThreads());
 $("copyThreadsBody").onclick = () => copy(renderThreads());
-$("copyThreadsComment").onclick = () => copy(renderThreadsComment());
+$("copyThreadsComment").onclick = () => renderThreadsComment() ? copy(renderThreadsComment()) : toast("정보형은 첫 댓글 없이 올려요");
 // 스레드 글쓰기 화면을 본문이 채워진 채로 열어요. [게시]는 직접 눌러요.
 // 첫 댓글(카톡방 링크)은 미리 복사해 두니까, 글을 올린 뒤 댓글에 붙여넣기만 하면 돼요.
 $("postThreads").onclick = async () => {
