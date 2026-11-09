@@ -246,6 +246,7 @@
       <h2>🧵 스레드용 · 모집글</h2>
       <p class="hint">여기 버튼은 모두 <b>스레드</b>에 올리는 글이에요.</p>
       <div class="tabs" id="threadsTabs">
+        <button data-type="recruit">📣 방 모집형 (상품 없이)</button>
         <button data-type="proof" class="on">① 가격 증거형</button>
         <button data-type="empathy">② 공감형</button>
         <button data-type="list">③ 리스트형</button>
@@ -320,6 +321,21 @@ const TH = {
   reactionBody: ["못 본 사람들 아쉬워해서 여기도 올림", "이런 거 매일 올라오는데 아는 사람만 알더라", "매일 이 정도 가격만 골라서 올리는 중"],
   questionHook: ["다들 {name} 얼마 주고 사요?", "{name} 보통 얼마에 사세요?", "{name} 이 가격이면 싼 거 맞나?"],
   questionBody: ["나 오늘 {deal} 찾았는데 이거 싼 거 맞나", "오늘 {deal}에 나온 거 봤는데 이 정도면 쟁여도 됨?", "{deal}이면 평소보다 싼 거 같은데 어때요?"],
+  // 방 모집형: 상품 없이 핫딜방 자체를 궁금하게 만드는 글 (반말·친근·궁금증·놓치면 손해)
+  recruit: [
+    "친구들 아직도 쿠팡에서\n검색하자마자 바로 결제하는 거 아니지? 😳\n\n똑같은 물건인데\n누구는 정가 주고 사고\n누구는 반값에 사더라 ㅋㅋ\n\n그게 너무 억울해서 요즘\n할인 정보만 따로 모아서\n공유하는 방을 운영하고 있어\n\n휴지, 생수 같은 생필품부터\n먹거리, 가전, 뷰티까지\n진짜 싼 것만 골라서 올려\n\n어차피 살 거면 제값 주고 사지 말자!",
+    "요즘 마트 한 번 가면\n5만 원 그냥 사라지지 않아? 🥲\n\n나만 그런 줄 알았는데\n다들 장바구니 보고 한숨 쉬더라\n\n그래서 나는 생필품을\n이제 정가 주고 안 사\n\n매일 할인 크게 뜬 것만 골라서\n카톡방에 모아두고 있거든\n\n같이 아끼면 덜 억울하잖아 ㅋㅋ",
+    "특가 보고 '이따 사야지' 했다가\n품절된 적 있는 사람? 🙋\n\n나 그거 몇 번 당하고 나서\n할인 뜨면 바로 알 수 있게\n특가방을 아예 만들어버림 ㅋㅋ\n\n쿠팡, 토스 특가 중에\n진짜 싼 것만 골라서\n뜨자마자 올려주는 방이야\n\n진짜 할인 크게 들어간 건\n고민하는 사이에 품절되는 경우도 많아 😂\n\n고민은 짧게, 결제는 싸게!",
+    "내 아침 루틴 공개함 ☀️\n\n일어나면 오늘 뜬 특가부터\n쭉 훑어보는 게 첫 번째 일이야\n\n그중에 진짜 싼 것만 골라서\n카톡 핫딜방에 올려두거든\n\n덕분에 생필품은\n정가로 산 기억이 별로 없음 ㅋㅋ\n\n혼자 알기 아까워서\n같이 보는 중이야 💛",
+    "이거 알려줘도 되나 싶은데 🤫\n\n같은 물건도\n언제 사느냐에 따라\n가격이 진짜 많이 달라\n\n그래서 할인 크게 들어간 타이밍만\n골라서 알려주는 방을 운영하고 있어\n\n광고 도배 없이\n괜찮은 가격만 딱딱 올려\n\n조용히 들어와서 보기만 해도 돼!\n이런 정보는 아는 사람만 챙겨가는 거야",
+    "다들 휴지 30롤 얼마 주고 사? 🧻\n\n나는 이거 비싸게 산 거 알고 나서\n충격받고 특가만 찾아보기 시작함 ㅋㅋ\n\n이제는 아예\n특가 모아보는 핫딜방까지 운영 중이야\n\n생필품, 먹거리, 가전까지\n'이건 사야 돼' 싶은 가격만 올려\n\n댓글로 너네는 얼마에 사는지 알려줘 👇",
+  ],
+  recruitClose: [
+    "핫딜방 궁금한 친구들은 프로필 확인해 봐!",
+    "궁금한 사람은 첫 댓글에 방 링크 있어 👇",
+    "같이 아끼고 싶으면 첫 댓글 확인해 줘 🙌",
+    "들어오고 싶은 사람은 프로필 링크 눌러줘!",
+  ],
   close: ["이런 거 매일 받아보고 싶으면 첫 댓글 👇", "매일 특가 받아보고 싶은 사람은 댓글 링크 👇", "궁금하면 첫 댓글에 방 링크 있어 👇"],
   questionClose: ["싸게 사는 곳 궁금하면 댓글 참고 👇", "나는 여기서 매일 특가 받아봄 👇 댓글 참고"],
   comment: [
@@ -328,7 +344,9 @@ const TH = {
     "여기서 매일 올려요 🙌\n{room}{link}\n조용히 받아보기만 해도 돼요",
   ],
 };
+const RECRUIT_NAMES = ["가격 비교 후킹", "물가 공감", "품절 아쉬움", "아침 루틴", "비밀 공유", "질문으로 댓글 유도"];
 const TH_TIPS = {
+  recruit: "상품 없이 방 자체를 궁금하게 만드는 글이에요. 🎲 다른 문구로를 누르면 6가지 스타일이 바뀌어요. 프로필에 카톡방 링크를 꼭 걸어두세요.",
   proof: "숫자 하나가 긴 설명보다 강해요. 상품 화면 캡처를 같이 올리면 더 좋아요.",
   empathy: "공감으로 먼저 멈추게 하고, 카톡방을 해결책으로 보여주는 글이에요.",
   list: "저장·공유가 잘 되는 유형이에요. 보관함 상품을 최대 5개까지 써요.",
@@ -551,6 +569,12 @@ function renderThreads() {
     : { name: "햇반 24개", price: "○○원", deal: "개당 ○○원" };
   const L = [];
 
+  if (type === "recruit") {
+    L.push(pick(TH.recruit, s));
+    if (state.settings.linkInBody) L.push("", "👇 핫딜방 바로가기", roomLinkText());
+    else L.push("", pick(TH.recruitClose, s + 1));
+    return L.join("\n");
+  }
   if (type === "proof") {
     L.push(fill(pick(TH.proofHook, s), v));
     if (best && unitPriceText(best)) L.push(`${unitPriceText(best)}이면 진짜 싼 거임`);
@@ -658,7 +682,8 @@ function draw() {
     list.append(box);
   });
   document.querySelectorAll("#threadsTabs button").forEach((b) => b.classList.toggle("on", b.dataset.type === state.threadsType));
-  $("threadsTip").textContent = "💡 " + TH_TIPS[state.threadsType];
+  $("threadsTip").textContent = "💡 " + (state.threadsType === "recruit"
+    ? `지금 스타일: ${RECRUIT_NAMES[state.threadsSeed % RECRUIT_NAMES.length]} · ` : "") + TH_TIPS[state.threadsType];
   // 새 상품이 담기면 스레드 글도 그 상품으로 바뀌어요
   if (draw.lastCount !== undefined && state.items.length > draw.lastCount) state.threadsKey = null;
   draw.lastCount = state.items.length;
@@ -675,7 +700,7 @@ function draw() {
     sel.append(o);
   });
   sel.value = state.items.some((i) => itemKey(i) === state.threadsKey) ? state.threadsKey : "";
-  $("threadsItemBox").hidden = state.threadsType === "list" || !state.items.length;
+  $("threadsItemBox").hidden = state.threadsType === "list" || state.threadsType === "recruit" || !state.items.length;
   // 스레드 글에 같이 올라갈 사진 미리보기
   const tp = $("threadsPhotos");
   tp.replaceChildren();
@@ -694,7 +719,8 @@ function draw() {
       tp.append(b);
     }
   });
-  if (!tItems.length) tp.textContent = "보관함에 상품을 담으면 여기에 사진이 나와요";
+  if (state.threadsType === "recruit") tp.textContent = "방 모집글은 상품 사진 없이 올려요. 카톡방 캡처(닉네임 가리기)를 붙이면 더 좋아요";
+  else if (!tItems.length) tp.textContent = "보관함에 상품을 담으면 여기에 사진이 나와요";
   $("threadsOut").textContent = renderThreads();
   $("threadsComment").textContent = renderThreadsComment();
 }
@@ -1086,6 +1112,7 @@ async function shareItems(items, text) {
 
 // 스레드 글에 들어가는 상품 (리스트형은 최대 5개, 나머지는 가장 좋은 상품 1개)
 function threadsItems() {
+  if (state.threadsType === "recruit") return [];
   if (state.threadsType === "list") return state.items.slice(-5).reverse();
   const b = bestItem();
   return b ? [b] : [];
