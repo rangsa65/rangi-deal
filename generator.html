@@ -248,6 +248,7 @@
       <div class="tabs" id="threadsTabs">
         <button data-type="info">💡 정보형 (홍보 없음)</button>
         <button data-type="recruit">📣 방 모집형 (상품 없이)</button>
+        <button data-type="hook">🔥 후킹형 (강의 스타일)</button>
         <button data-type="proof" class="on">① 가격 증거형</button>
         <button data-type="empathy">② 공감형</button>
         <button data-type="list">③ 리스트형</button>
@@ -269,6 +270,7 @@
         <button id="postThreads">🧵 스레드에 바로 올리기</button>
         <button id="copyThreadsBody">📝 글만 복사</button>
         <button id="rerollThreads">🎲 다른 문구로</button>
+        <button id="aiPrompt">🤖 AI 프롬프트 복사</button>
       </div>
       <label>첫 댓글 (카톡방 링크)</label>
       <pre class="out" id="threadsComment"></pre>
@@ -358,9 +360,105 @@ const TH = {
     "여기서 매일 올려요 🙌\n{room}{link}\n조용히 받아보기만 해도 돼요",
   ],
 };
+// 🔥 후킹형 (강의 스타일): 첫 줄 후킹 → 상황 → 가격을 이야기 속에 → 감탄으로 마무리. 광고 말투 금지.
+const FRUITS = [["샤인머스캣", "🍇"], ["복숭아", "🍑"], ["수박", "🍉"], ["포도", "🍇"], ["사과", "🍎"], ["신고배", "🍐"], ["나주배", "🍐"], ["한라봉", "🍊"], ["귤", "🍊"], ["딸기", "🍓"], ["망고", "🥭"], ["참외", "🍈"], ["체리", "🍒"], ["블루베리", "🫐"], ["바나나", "🍌"], ["키위", "🥝"], ["자두", "🍑"]];
+const LIFE_RE = /휴지|화장지|물티슈|키친타[월올]|세제|유연제|샴푸|린스|바디워시|치약|칫솔|수세미|청소|락스|탈취|방향제|비누|핸드워시|면도|생리대|기저귀|쓰레기봉투|지퍼백|위생랩|호일|행주|고무장갑/;
+const FOOD_RE = /햇반|즉석밥|라면|만두|교자|치킨|닭가슴살|삼겹|돼지|소고기|한우|고기|김치|우유|커피|생수|음료|제로|콜라|사이다|탄산수|과자|간식|빵|떡|어묵|소시지|햄|참치|스팸|계란|달걀|쌀|견과|요거트|아이스크림|피자|냉동|볶음밥|국|찌개/;
+const HOOK_KIND_NAME = { fruit: "과일", life: "생활용품", food: "음식·간식", deal: "특가" };
+const HOOK = {
+  deal: [
+    "이 가격 봤는데 내가 눈이 안 돌아가겠냐고ㅋㅋㅋ\n\n{short}\n{story}\n\n장바구니 앞에서 혼자 계산기 두드리는 중;;",
+    "이거 나만 모르고 있었던 거야...?\n\n{short} 지금 {price}임\n{cmp}\n\n이런 건 진짜 아는 사람만 챙겨가더라",
+    "처음엔 별로 안 싼 줄 알았거든?\n\n근데 {short} 가격 다시 보니까\n{cmp2}\n\n이건 좀 반칙 아니냐고ㅋㅋ",
+  ],
+  life: [
+    "이건 썩는 것도 아니잖아..?\n\n{short}\n{story}\n\n어차피 계속 쓰는 거 이럴 때 쟁여두는 게 이득이지ㅋㅋ",
+    "맨날 쓰는 건데 가격 보고 멈칫함 ㄷㄷ\n\n{short} {price}\n{cmp}\n\n떨어질 때마다 급하게 정가 주고 사는 거 이제 그만해야지;;",
+    "다 쓰고 나서 급하게 사면 꼭 비싸게 사더라ㅋㅋ\n\n그래서 {short} 같은 건\n쌀 때 미리 사두는 게 답인데\n\n{story}\n\n지금이 딱 그 타이밍인 듯",
+  ],
+  food: [
+    "이 가격이면 배달 한 번 참은 셈 아님..?ㅋㅋ\n\n{short}\n{story}\n\n쟁여두면 든든한 거 인정?",
+    "{short} 좋아하는 사람 여기 모여봐 🙋\n\n{story}\n{cmp}\n\n떨어지기 전에 미리 사두는 게 국룰ㅋㅋ",
+    "장보러 가서 이거 집었다가\n가격 보고 내려놓은 적 있음?;;\n\n근데 {short} 지금 {price}임\n{cmp}\n\n이번엔 안 내려놔도 될 듯ㅋㅋ",
+  ],
+  fruit: [
+    "{fruit} 좋아하는 사람 여기여기 모여라! {emoji}\n\n{short}\n{story}\n\n냉장고에 넣어뒀다가 차갑게 꺼내 먹을 생각하니까 벌써 행복함ㅋㅋ\n요즘 {fruit} 뭐 살지 고민이었다면 한번 봐봐",
+    "냉장고에 {fruit} 떨어지면 섭섭한 사람? {emoji}\n\n{short}\n{story}\n{cmp}\n\n가족들이랑 나눠 먹을 과일 찾고 있었으면 괜찮겠다",
+    "{fruit} 한 번 집으면 멈출 수 없는 사람 나와봐ㅋㅋ {emoji}\n\n한입 베어 무는 상상만 해도 침 고임;;\n\n{short}\n{story}\n\n요즘 과일 뭐 살지 고민이었다면 한번 확인해봐",
+  ],
+};
+const HOOK_VER = ["1번 강한 후킹", "2번 공감·상황", "3번 반전·새 각도"];
+function hookKind(it) {
+  const n = it.name || "";
+  // 청포도 음료, 딸기맛 우유처럼 과일 이름이 들어간 음료·가공식품은 음식으로
+  if (/\d+\s*(ml|l|리터)(?![a-z])|음료|탄산|워터|주스|에이드|스무디|잼|젤리|맛\b|맛[ ,)]|향[ ,)]/i.test(n)) return { kind: "food" };
+  const f = FRUITS.find(([k]) => n.includes(k));
+  if (f) return { kind: "fruit", fruit: f[0], emoji: f[1] };
+  if (LIFE_RE.test(n)) return { kind: "life" };
+  if (FOOD_RE.test(n)) return { kind: "food" };
+  return { kind: "deal" };
+}
+function hookPost(it, s) {
+  const k = hookKind(it);
+  const d = discountPct(it), u = unitPriceText(it), p = it.price ? won(it.price) : "";
+  const story = it.orig && d > 0 ? `평소 ${won(it.orig)} 하던 게\n지금 ${p}에 떠 있음;;`
+    : u ? `${u}꼴이면 말 다 했지ㅋㅋ`
+    : p ? `지금 ${p}에 떠 있길래 일단 저장해둠` : "가격 보고 멈칫함 ㄷㄷ";
+  const cmp = u ? `계산해보니까 ${u}꼴임 ㄷㄷ` : d > 0 ? `평소보다 ${d}%나 빠진 가격;;` : "";
+  const cmp2 = u ? `${u}꼴이더라 ㄷㄷ` : d > 0 ? `평소보다 ${d}%나 빠져 있더라 ㄷㄷ` : "생각보다 훨씬 싸더라 ㄷㄷ";
+  const short = (it.name || "이거").split(/[,(\[]/)[0].trim().slice(0, 24);
+  const text = fill(pick(HOOK[k.kind], s), { short, story, cmp, cmp2, price: p || "이 가격", fruit: k.fruit || "", emoji: k.emoji || "" });
+  return text.replace(/\n{3,}/g, "\n\n");
+}
+
+// 🤖 강의 프롬프트를 줄인 것: 챗GPT에 상품 사진과 함께 붙여 넣으면 3가지 버전을 써 줘요
+const AI_PROMPT = `너는 Threads(스레드)에서 쿠팡파트너스 제휴 콘텐츠를 만드는 카피라이터야.
+아래 상품(사진이 있으면 사진도)을 보고, 사람들이 스크롤을 멈추고 읽을 만한 스레드 글을 3가지 버전으로 써줘.
+
+[가장 중요한 원칙]
+- 광고가 아니라 실제 사람의 재미있는 일상글·후기처럼 읽혀야 한다.
+- ★첫 줄 후킹★이 가장 중요하다. 첫 줄만 봐도 "뭔데?", "얼마나 싸길래?"가 궁금해야 한다.
+- 상품 설명이나 스펙 나열로 시작하지 않는다.
+- 반말, 친구한테 말하듯 자연스럽게. ㅋㅋ, ;;, ㄷㄷ, ...? 같은 표현은 어울릴 때만.
+- 3~6줄로 짧게: 후킹 → 상황 → 핵심 장점 → 반전/감탄 → 마무리.
+- "강력 추천, 구매하세요, 놓치지 마세요, 가성비 최고, 필수템, 역대급, 지금 바로 구매" 같은 광고 문구는 쓰지 않는다.
+
+[상품 종류별 감정]
+- 생활용품: "왜 이걸 이제 알았지?" (귀찮은 문제를 구체적으로)
+- 음식/간식: "이게 이런 맛이라고?"
+- 특가: "얼마나 싸길래?" 가격이 이야기의 이유가 되게. 평소 가격과 비교해서 왜 눈이 돌아갔는지 보여준다.
+- 대량구매: "대체 얼마나 주문한 거야ㅋㅋ"
+- 과일: "와 저거 진짜 맛있겠다" 좋아하는 사람을 불러 모으는 밝은 첫 줄 + 식감·과즙 묘사, 자극적인 특가 공식은 쓰지 않는다.
+- 소재와 맞지 않는 공식을 억지로 섞지 않는다.
+
+[사실성]
+- 아래에 없는 정보(정상가, 할인율, 효능, 성분, 원산지, 당도, 칼로리, 전문가 추천, 인증)는 지어내지 않는다.
+- 내가 실제로 샀다거나 써봤다고 알려주지 않았으면 "샀다/써봤다"고 단정하지 말고 "장바구니에 담는 중", "고민 중", "저장해둠"처럼 쓴다.
+- 받은 가격 정보는 숫자만 나열하지 말고 이야기 속에 녹인다.
+
+[출력]
+분석 설명 없이 바로
+### 1번 (가장 강한 후킹)
+### 2번 (공감/상황극)
+### 3번 (반전 또는 새로운 각도)
+세 버전은 첫 줄부터 서로 완전히 다른 방향으로 쓴다.`;
+function aiPromptFor(it) {
+  const L = [AI_PROMPT, "", "[이번 상품]", `- 상품명: ${it.name || ""}`];
+  if (it.price) L.push(`- 지금 가격: ${won(it.price)}`);
+  if (it.orig && discountPct(it) > 0) L.push(`- 평소 가격: ${won(it.orig)} (${discountPct(it)}% 할인)`);
+  const u = unitPriceText(it);
+  if (u) L.push(`- 단가: ${u}`);
+  if (it.ship === 0 || it.ship) L.push(`- 배송: ${shipText(it)}`);
+  if (it.coupon) L.push(`- 쿠폰/조건: ${it.coupon}`);
+  if (it.photo || it.imgUrl) L.push("- 상품 사진: 함께 보냄");
+  L.push("", "위 상품으로 1번, 2번, 3번 게시글을 써줘.");
+  return L.join("\n");
+}
+
 const RECRUIT_NAMES = ["가격 비교 후킹", "물가 공감", "품절 아쉬움", "아침 루틴", "비밀 공유", "질문으로 댓글 유도"];
 const INFO_NAMES = ["휴지 고르는 법", "대용량 함정", "세제 비교법", "쿠팡 가격 변동", "골드박스", "반품마켓", "한 달 생필품 비용", "질문 (댓글 유도)", "할인율 함정", "체크리스트 (저장 유도)"];
 const TH_TIPS = {
+  hook: "강의 스타일: 첫 줄 후킹 + 반말 3~6줄 + 가격을 이야기 속에. 🎲 다른 문구로 1·2·3번 버전이 바뀌어요. 더 다양하게 쓰려면 [🤖 AI 프롬프트 복사] → 챗GPT에 붙여넣기.",
   info: "홍보·링크 없는 정보 글이에요. 계정 초반 1~2주는 이것만 올리고, 다른 사람 글에 댓글도 꾸준히 달아주세요. 주제 태그는 생활꿀팁·절약·살림 중 하나를 달아요.",
   recruit: "상품 없이 방 자체를 궁금하게 만드는 글이에요. 🎲 다른 문구로를 누르면 6가지 스타일이 바뀌어요. 프로필에 카톡방 링크를 꼭 걸어두세요.",
   proof: "숫자 하나가 긴 설명보다 강해요. 상품 화면 캡처를 같이 올리면 더 좋아요.",
@@ -586,6 +684,13 @@ function renderThreads() {
   const L = [];
 
   if (type === "info") return pick(TH.info, s); // 홍보 문구·링크 없이 정보만
+  if (type === "hook") {
+    if (!best) return "(보관함에 상품을 담으면 후킹 글이 만들어져요)";
+    L.push(hookPost(best, s));
+    if (state.settings.linkInBody) L.push("", "이런 거 매일 받아보고 싶으면 들어와 👇", roomLinkText());
+    else L.push("", pick(TH.close, s + 2));
+    return L.join("\n");
+  }
   if (type === "recruit") {
     L.push(pick(TH.recruit, s));
     if (state.settings.linkInBody) L.push("", "👇 핫딜방 바로가기", roomLinkText());
@@ -700,8 +805,9 @@ function draw() {
     list.append(box);
   });
   document.querySelectorAll("#threadsTabs button").forEach((b) => b.classList.toggle("on", b.dataset.type === state.threadsType));
-  const styleNames = state.threadsType === "recruit" ? RECRUIT_NAMES : state.threadsType === "info" ? INFO_NAMES : null;
-  $("threadsTip").textContent = "💡 " + (styleNames
+  const styleNames = state.threadsType === "recruit" ? RECRUIT_NAMES : state.threadsType === "info" ? INFO_NAMES : state.threadsType === "hook" ? HOOK_VER : null;
+  const hookItem = state.threadsType === "hook" ? bestItem() : null;
+  $("threadsTip").textContent = "💡 " + (hookItem ? `상품 종류: ${HOOK_KIND_NAME[hookKind(hookItem).kind]} · ` : "") + (styleNames
     ? `지금 글: ${styleNames[Math.abs(state.threadsSeed) % styleNames.length]} · ` : "") + TH_TIPS[state.threadsType];
   // 새 상품이 담기면 스레드 글도 그 상품으로 바뀌어요
   if (draw.lastCount !== undefined && state.items.length > draw.lastCount) state.threadsKey = null;
@@ -1097,6 +1203,7 @@ async function copyWithPhoto(items, text) {
   }
   pendingText = text; leftAfterPhoto = false;
   toast("🖼️ 사진 복사 완료! ① 입력칸에 Ctrl+V → 사진 붙이기  ② 이 창을 다시 누르면 글이 자동으로 복사돼요 → 다시 Ctrl+V", 12000);
+  return true;
 }
 window.addEventListener("blur", () => { if (pendingText) leftAfterPhoto = true; });
 async function copyPendingText() {
@@ -1240,7 +1347,20 @@ $("postThreads").onclick = async () => {
       : "스레드가 열렸어요. 내용을 확인하고 [게시]를 눌러주세요", 4000);
   }
 };
-$("threadsItem").onchange = (e) => { state.threadsKey = e.target.value || null; save(); draw(); };
+// 강의 프롬프트 + 상품 정보(+사진)를 챗GPT에 넣을 수 있게: PC는 사진 → 글 순서로 복사, 휴대폰은 공유
+$("aiPrompt").onclick = async () => {
+  const it = bestItem();
+  if (!it) return toast("보관함에 상품을 먼저 담아주세요");
+  const text = aiPromptFor(it);
+  if (CAN_SHARE) return shareItems([it], text);
+  if (it.photo || it.imgUrl) {
+    if (await copyWithPhoto([it], text)) toast("🤖 사진 복사 완료! 챗GPT 입력칸에 Ctrl+V(사진) → 이 창 한 번 누르기 → 다시 Ctrl+V(프롬프트) → 보내기", 12000);
+  } else {
+    await copy(text);
+    toast("🤖 프롬프트를 복사했어요! 챗GPT 입력칸에 Ctrl+V → 보내기", 5000);
+  }
+};
+$("threadsItem").onchange =(e) => { state.threadsKey = e.target.value || null; save(); draw(); };
 $("rerollThreads").onclick =() => { state.threadsSeed++; save(); draw(); };
 document.querySelectorAll("#threadsTabs button").forEach((b) => (b.onclick = () => { state.threadsType = b.dataset.type; save(); draw(); }));
 $("linkInBody").addEventListener("change", () => { state.settings.linkInBody = $("linkInBody").checked; save(); draw(); });
