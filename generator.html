@@ -364,8 +364,14 @@ const TH = {
 const FRUITS = [["샤인머스캣", "🍇"], ["복숭아", "🍑"], ["수박", "🍉"], ["포도", "🍇"], ["사과", "🍎"], ["신고배", "🍐"], ["나주배", "🍐"], ["한라봉", "🍊"], ["귤", "🍊"], ["딸기", "🍓"], ["망고", "🥭"], ["참외", "🍈"], ["체리", "🍒"], ["블루베리", "🫐"], ["바나나", "🍌"], ["키위", "🥝"], ["자두", "🍑"]];
 const LIFE_RE = /휴지|화장지|물티슈|키친타[월올]|세제|유연제|샴푸|린스|바디워시|치약|칫솔|수세미|청소|락스|탈취|방향제|비누|핸드워시|면도|생리대|기저귀|쓰레기봉투|지퍼백|위생랩|호일|행주|고무장갑/;
 const FOOD_RE = /햇반|즉석밥|라면|만두|교자|치킨|닭가슴살|삼겹|돼지|소고기|한우|고기|김치|우유|커피|생수|음료|제로|콜라|사이다|탄산수|과자|간식|빵|떡|어묵|소시지|햄|참치|스팸|계란|달걀|쌀|견과|요거트|아이스크림|피자|냉동|볶음밥|국|찌개/;
-const HOOK_KIND_NAME = { fruit: "과일", life: "생활용품", food: "음식·간식", deal: "특가" };
+const STOCK_RE = /생수|탄산수|음료|주스|커피|우유|두유|참기름|들기름|식용유|올리브유|카놀라유|포도씨유|간장|고추장|된장|쌈장|소금|설탕|쌀|밀가루|부침가루|튀김가루|참깨|액젓|식초|소스|케찹|케첩|마요네즈|햇반|즉석밥|조미김|김자반|라면/;
+const HOOK_KIND_NAME = { fruit: "과일", life: "생활용품", stock: "식재료·음료 쟁임", food: "음식·간식", deal: "특가" };
 const HOOK = {
+  stock: [
+    "어차피 계속 먹는 거잖아..?\n\n{short}\n{story}\n\n이럴 때 쟁여두는 게 이득이지ㅋㅋ",
+    "집에 떨어지면 은근 아쉬운 거 있잖아ㅋㅋ\n\n{short} 지금 {price}임\n{cmp}\n\n이럴 때 미리 채워두는 게 국룰;;",
+    "다 떨어지고 나서 급하게 사면 꼭 비싸게 사더라ㅋㅋ\n\n그래서 {short} 같은 건\n쌀 때 미리 사두는 게 답인데\n\n{story}\n\n지금이 딱 그 타이밍인 듯",
+  ],
   deal: [
     "이 가격 봤는데 내가 눈이 안 돌아가겠냐고ㅋㅋㅋ\n\n{short}\n{story}\n\n장바구니 앞에서 혼자 계산기 두드리는 중;;",
     "이거 나만 모르고 있었던 거야...?\n\n{short} 지금 {price}임\n{cmp}\n\n이런 건 진짜 아는 사람만 챙겨가더라",
@@ -391,10 +397,14 @@ const HOOK_VER = ["1번 강한 후킹", "2번 공감·상황", "3번 반전·새
 function hookKind(it) {
   const n = it.name || "";
   // 청포도 음료, 딸기맛 우유처럼 과일 이름이 들어간 음료·가공식품은 음식으로
-  if (/\d+\s*(ml|l|리터)(?![a-z])|음료|탄산|워터|주스|에이드|스무디|잼|젤리|맛\b|맛[ ,)]|향[ ,)]/i.test(n)) return { kind: "food" };
-  const f = FRUITS.find(([k]) => n.includes(k));
-  if (f) return { kind: "fruit", fruit: f[0], emoji: f[1] };
   if (LIFE_RE.test(n)) return { kind: "life" };
+  if (STOCK_RE.test(n)) return { kind: "stock" };
+  if (/음료|탄산|워터|주스|에이드|스무디/.test(n)) return { kind: "stock" };
+  if (/잼|젤리|맛\b|맛[ ,)]|향[ ,)]/.test(n)) return { kind: "food" };
+  const f = FRUITS.find(([k]) => n.includes(k));
+  // 500ml처럼 용량이 붙은 과일 이름은 음료(예: 청포도 500ml)라서 과일에서 빼요
+  if (f && !/\d+\s*(ml|l|리터)(?![a-z])/i.test(n)) return { kind: "fruit", fruit: f[0], emoji: f[1] };
+  if (f) return { kind: "stock" };
   if (FOOD_RE.test(n)) return { kind: "food" };
   return { kind: "deal" };
 }
@@ -404,10 +414,13 @@ function hookPost(it, s) {
   const story = it.orig && d > 0 ? `평소 ${won(it.orig)} 하던 게\n지금 ${p}에 떠 있음;;`
     : u ? `${u}꼴이면 말 다 했지ㅋㅋ`
     : p ? `지금 ${p}에 떠 있길래 일단 저장해둠` : "가격 보고 멈칫함 ㄷㄷ";
-  const cmp = u ? `계산해보니까 ${u}꼴임 ㄷㄷ` : d > 0 ? `평소보다 ${d}%나 빠진 가격;;` : "";
+  const tpl = pick(HOOK[k.kind], s);
+  // 같은 단가 문장이 두 번 나오지 않게: 글에 {story}가 있고 그게 이미 단가 문장이면 비교 줄은 빼요
+  const storyUsesUnit = !(it.orig && d > 0) && !!u && tpl.includes("{story}");
+  const cmp = storyUsesUnit ? "" : u ? `계산해보니까 ${u}꼴임 ㄷㄷ` : d > 0 ? `평소보다 ${d}%나 빠진 가격;;` : "";
   const cmp2 = u ? `${u}꼴이더라 ㄷㄷ` : d > 0 ? `평소보다 ${d}%나 빠져 있더라 ㄷㄷ` : "생각보다 훨씬 싸더라 ㄷㄷ";
   const short = (it.name || "이거").split(/[,(\[]/)[0].trim().slice(0, 24);
-  const text = fill(pick(HOOK[k.kind], s), { short, story, cmp, cmp2, price: p || "이 가격", fruit: k.fruit || "", emoji: k.emoji || "" });
+  const text = fill(tpl, { short, story, cmp, cmp2, price: p || "이 가격", fruit: k.fruit || "", emoji: k.emoji || "" });
   return text.replace(/\n{3,}/g, "\n\n");
 }
 
