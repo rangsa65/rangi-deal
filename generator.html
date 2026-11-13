@@ -450,7 +450,7 @@ function honeyList(it) {
 function honeyPost(it, s) {
   // 추천 꿀템에서 쿠팡 사진을 가져온 상품: 한마디가 없으면 미리 넣어둔 글을 써요 (쿠팡 상품이면 '다이소' 줄은 빼요)
   if (it.builtin && !(it.comment || "").trim()) {
-    const t = it.link ? it.builtin.split("\n").filter((l) => !/다이소/.test(l)).join("\n") : it.builtin;
+    const t = it.link || it.productUrl ? it.builtin.split("\n").filter((l) => !/다이소/.test(l)).join("\n") : it.builtin;
     return t.replace(/\n{3,}/g, "\n\n").trim();
   }
   const list = honeyList(it);
@@ -985,11 +985,15 @@ function draw() {
   // 추천 꿀템 글이면: 쿠팡에서 같은 종류 상품 사진·내 링크 가져오기
   const bi = currentBuiltin();
   if (bi) {
+    const top = document.createElement("button");
+    top.className = "primary";
+    top.textContent = `🏆 쿠팡 판매순 1~3위 보기`;
+    top.onclick = () => showTop3(bi);
     const b = document.createElement("button");
-    b.className = "primary";
-    b.textContent = `🔗 쿠팡에서 '${bi[0]}' 사진 찾기`;
+    b.textContent = `🔗 직접 찾기`;
     b.onclick = () => findHoneyOnCoupang(bi);
-    tp.append(document.createElement("br"), b);
+    tp.append(document.createElement("br"), top, b);
+    if (topPicks && topPicks.key === bi[0]) tp.append(renderTopPicks(bi));
   }
   $("threadsOut").textContent = renderThreads();
   $("threadsComment").textContent = renderThreadsComment() || "(정보형·꿀템 소개형은 첫 댓글에 카톡방 링크를 달지 않아요. 홍보 없는 글이어야 노출이 잘 돼요)";
@@ -1034,6 +1038,97 @@ function cancelEdit() {
 // ---------- 쿠팡 골드박스 상품 → 간편 링크 만들기 ----------
 const PENDING = "rangi-pending-link";
 const LINK_PAGE = "https://partners.coupang.com/#affiliate/ws/link-to-any-page";
+
+// ---------- 추천 꿀템 → 쿠팡 판매량순 1~3위 골라 담기 ----------
+let topPicks = null; // { key: 꿀템 이름, items: [...] | null(불러오는 중) }
+function searchWord(b) { return b[0].split("·")[0].trim(); }
+function topCall(q) {
+  if (IN_EXTENSION) return new Promise((res) => chrome.runtime.sendMessage({ type: "top3", q }, (r) => { void chrome.runtime.lastError; res(r || null); }));
+  if (BRIDGE) return extCall({ type: "top3", q });
+  return Promise.resolve(null);
+}
+async function showTop3(b) {
+  const q = searchWord(b);
+  const sortedUrl = "https://www.coupang.com/np/search?q=" + encodeURIComponent(q) + "&sorter=saleCountDesc";
+  if (!IN_EXTENSION && !BRIDGE) {
+    // 휴대폰: 판매량순 화면만 열어줘요 → 고른 뒤 [🔗 직접 찾기]로 사진·링크 넣기
+    window.open(sortedUrl, "_blank");
+    return toast("쿠팡 판매량순 화면을 열었어요. 위에서 1~3번째(광고 빼고) 중에 고른 뒤 [🔗 직접 찾기]로 사진·링크를 넣어주세요", 7000);
+  }
+  topPicks = { key: b[0], items: null };
+  draw();
+  const r = await topCall(q);
+  if (!r || !Array.isArray(r.items)) {
+    topPicks = null; draw();
+    window.open(sortedUrl, "_blank");
+    return toast("확장 프로그램을 새로고침(업데이트)해야 1~3위를 가져올 수 있어요. 대신 판매량순 화면을 열었어요", 7000);
+  }
+  topPicks = { key: b[0], items: r.items };
+  draw();
+  if (!r.items.length) {
+    window.open(sortedUrl, "_blank");
+    toast("상품을 읽지 못했어요. 판매량순 화면을 열었으니 직접 골라주세요", 5000);
+  }
+}
+function renderTopPicks(b) {
+  const box = document.createElement("div");
+  box.style.cssText = "width:100%;display:flex;flex-direction:column;gap:8px;margin-top:8px";
+  if (!topPicks.items) { box.textContent = "⏳ 쿠팡 판매량순 1~3위를 가져오는 중이에요 (10초쯤 걸려요)"; return box; }
+  if (!topPicks.items.length) { box.textContent = "상품을 읽지 못했어요"; return box; }
+  const head = document.createElement("div");
+  head.textContent = `🏆 쿠팡 판매량순 '${searchWord(b)}' (광고 제외) · 마음에 드는 걸 골라요`;
+  head.style.fontWeight = "700";
+  box.append(head);
+  topPicks.items.forEach((p) => {
+    const row = document.createElement("div");
+    row.style.cssText = "display:flex;gap:10px;align-items:center;border:1px solid #e5e1d8;border-radius:12px;padding:8px;background:#fff";
+    if (p.imgUrl) {
+      const img = document.createElement("img");
+      img.src = p.imgUrl; img.alt = ""; img.referrerPolicy = "no-referrer";
+      img.style.cssText = "width:72px;height:72px;object-fit:cover;border-radius:8px;flex:none";
+      img.onerror = () => img.remove();
+      row.append(img);
+    }
+    const info = document.createElement("div");
+    info.style.cssText = "flex:1;min-width:0;font-size:13px;line-height:1.4";
+    const t = document.createElement("div");
+    t.textContent = `${p.rank}위 · ${p.name}`;
+    t.style.cssText = "display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden";
+    const pr = document.createElement("div");
+    pr.textContent = p.price ? won(p.price) : "";
+    pr.style.fontWeight = "700";
+    info.append(t, pr);
+    const go = document.createElement("button");
+    go.className = "primary"; go.textContent = "이걸로";
+    go.onclick = () => chooseTop(b, p);
+    row.append(info, go);
+    box.append(row);
+  });
+  return box;
+}
+function chooseTop(b, p) {
+  let it = state.items.find((i) => i.builtin === b[1] && !i.link);
+  if (!it) {
+    it = { link: "", comment: "", grade: "auto", seed: Math.floor(Math.random() * 1000), honey: true, builtin: b[1], from: "builtin", ship: 0, coupon: "" };
+    state.items.push(it);
+  }
+  const q = qtyFromName(p.name);
+  Object.assign(it, { name: p.name, price: p.price || 0, orig: p.orig || 0, productUrl: p.productUrl, imgUrl: p.imgUrl || "", platform: "coupang", qty: q.qty, unit: q.unit, needsCheck: false, needsLink: false });
+  delete it.searchName; delete it.awaitLink; delete it.photo;
+  topPicks = null;
+  state.threadsType = "honey"; state.threadsKey = null;
+  save(); draw();
+  // 내 제휴 링크 만들기 (PC: 간편 링크 화면에서 자동으로 [링크 생성]까지 눌러줘요 → [URL 복사]만 누르면 연결)
+  makeLink(it);
+  // 사진도 받아서 저장해 둬요 (스레드에 같이 올라가요)
+  if (IN_EXTENSION && it.imgUrl) {
+    chrome.runtime.sendMessage({ type: "fetchImg", url: it.imgUrl }, (r) => {
+      void chrome.runtime.lastError;
+      const t = findSame(it);
+      if (t && r && r.dataUrl) { t.photo = r.dataUrl; save(); draw(); }
+    });
+  } else photoBlob(it).then(() => draw()).catch(() => {});
+}
 
 // 지금 스레드 칸에 보이는 글이 미리 넣어둔 꿀템이면 [이름, 글]을 알려줘요
 function currentBuiltin() {
