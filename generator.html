@@ -1438,7 +1438,7 @@ window.addEventListener("focus", () => setTimeout(copyPendingText, 150));
 document.addEventListener("pointerdown", () => copyPendingText(), true);
 
 // 휴대폰: 사진과 글을 함께 공유 (카톡은 사진만 받는 경우가 있어서 글은 미리 복사해 둬요)
-async function shareItems(items, text) {
+async function shareItems(items, text, doneMsg) {
   const files = [];
   for (const it of items) {
     if (files.length >= 10) break;
@@ -1451,7 +1451,7 @@ async function shareItems(items, text) {
   try { await navigator.clipboard.writeText(text); } catch (e) {}
   try {
     await navigator.share({ files, text });
-    toast("글도 복사돼 있어요. 사진만 보내졌으면 대화창을 길게 눌러 붙여넣기 하세요", 5000);
+    toast(doneMsg || "글도 복사돼 있어요. 사진만 보내졌으면 대화창을 길게 눌러 붙여넣기 하세요", 6000);
   } catch (e) {
     if (e.name !== "AbortError") shareText(text);
   }
@@ -1554,6 +1554,15 @@ $("copyThreadsComment").onclick = () => renderThreadsComment() ? copy(renderThre
 $("postThreads").onclick = async () => {
   const body = renderThreads();
   const comment = renderThreadsComment();
+  // 휴대폰: 스레드 바로가기 주소로는 사진을 못 넘겨요 → 사진이 있으면 공유 창으로 사진+글을 같이 보내요
+  if (CAN_SHARE) {
+    const items = threadsItems().filter((i) => i.photo || i.imgUrl);
+    if (items.length) {
+      toast("공유 목록에서 [Threads]를 골라주세요", 3000);
+      return shareItems(items, body, "글도 복사돼 있어요. 스레드에 사진만 들어갔으면 글쓰기 칸을 꾹 눌러 [붙여넣기] 하세요"
+        + (comment.trim() ? ". 첫 댓글은 게시 후 [📋 첫 댓글 복사]로 달아주세요" : ""));
+    }
+  }
   // PC: 사진이 있으면 사진을 복사해 둬요 → 스레드 글쓰기 칸에 Ctrl+V 하면 사진이 붙어요
   const withPhoto = !CAN_SHARE ? threadsItems().find((i) => i.photo || i.imgUrl) : null;
   // 새 창이 열리면 이 화면이 포커스를 잃어 복사가 막히니까, 복사를 먼저 끝내고 열어요
