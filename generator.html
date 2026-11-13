@@ -1066,7 +1066,9 @@ function makeLink(it) {
     save();
     navigator.clipboard.writeText(it.searchName).catch(() => {});
     window.open("https://partners.coupang.com/", "_blank");
-    toast(CAN_SHARE
+    toast(CAN_SHARE && it.builtin
+      ? "이름을 복사했어요. 파트너스 검색 → 상품 사진을 꾹 눌러 [이미지 공유 → 랑이 특가 자동화] → [링크 생성 → URL 복사] 후 앱에 붙여넣기"
+      : CAN_SHARE
       ? "상품명을 복사했어요. 파트너스 검색창에 붙여넣고 같은 상품의 [링크 생성] → [URL 복사] → 이 앱에 돌아와 붙여넣으면 연결돼요"
       : "상품명을 복사했어요. 파트너스 검색창에 Ctrl+V → 같은 상품의 [링크 생성] → [URL 복사] 하면 자동으로 연결돼요", 7000);
     return;
@@ -1301,6 +1303,25 @@ $("photoInput").addEventListener("change", async () => {
     draw();
   } catch (e) { toast("사진을 읽지 못했어요. 다른 사진으로 해주세요"); }
 });
+
+// 휴대폰: 쿠팡 파트너스 등에서 상품 사진을 [이미지 공유 → 랑이 특가 자동화]로 보내면
+// 링크를 기다리는 상품(쿠팡에서 찾기 누른 꿀템) → 사진 없는 가장 최근 상품 순서로 붙여요
+async function attachSharedPhoto() {
+  try {
+    const c = await caches.open("rangi-share");
+    const res = await c.match("shared-photo");
+    if (!res) return;
+    await c.delete("shared-photo");
+    const url = await fileToPhoto(await res.blob());
+    const rev = [...state.items].reverse();
+    const t = state.items.filter((i) => i.awaitLink && !i.photo).sort((a, b) => b.awaitLink - a.awaitLink)[0]
+      || rev.find((i) => !i.photo && !i.imgUrl) || rev[0];
+    if (!t) return toast("먼저 상품을 담고 사진을 보내주세요", 4000);
+    t.photo = url;
+    if (save()) toast(`📷 '${(t.name || "상품").slice(0, 20)}'에 사진을 넣었어요`, 3500);
+    draw();
+  } catch (e) { toast("공유한 사진을 읽지 못했어요. 📷 사진 넣기로 넣어주세요", 4000); }
+}
 
 // 공유·복사용 사진 파일. 직접 넣은 사진 → 없으면 자동으로 가져온 상품 사진
 async function photoBlob(it) {
@@ -1580,10 +1601,10 @@ $("adTag").addEventListener("change", () => { state.settings.adTag = $("adTag").
   // 휴대폰 토스 앱에서 [공유 → 랑이 특가 자동화]로 들어온 내용 받기 (generator.html?title=..&text=..&url=..)
   const qs = new URLSearchParams(location.search);
   const shared = ["text", "url"].map((k) => qs.get(k)).filter(Boolean).join("\n");
-  if (shared || qs.get("title")) {
-    history.replaceState(null, "", location.pathname);
-    importText(shared, qs.get("title"));
-  }
+  const sharedPhoto = qs.get("photo") === "1";
+  if (shared || qs.get("title") || sharedPhoto) history.replaceState(null, "", location.pathname);
+  if (shared || (qs.get("title") && !sharedPhoto)) importText(shared, qs.get("title"));
+  if (sharedPhoto) attachSharedPhoto();
 
   // 인터넷 주소로 열었을 때만 휴대폰 앱 설치 기능 켜기 (확장 프로그램·파일로 열 때는 안 씀)
   if (location.protocol.startsWith("http") && "serviceWorker" in navigator) {
