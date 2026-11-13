@@ -404,6 +404,22 @@ const HONEY = [
   "살림하는 사람들 이건 저장해둬 📌\n\n{store}{short}\n✔️ {point}\n{priceCheck}\n\n생각보다 모르는 사람 많더라",
 ];
 const HONEY_STORE = "다이소 가면 이건 꼭 찾아봐 🛒\n\n{short}\n{point}\n{priceLine}\n\n가격 생각하면 그냥 지나치기 아까움;;";
+// 미리 넣어둔 꿀템 글: 다이소·생활용품 코너에서 흔히 파는 물건, 용도만 적고 가격·후기는 지어내지 않아요
+const HONEY_BUILTIN = [
+  ["싱크대 배수구 거름망", "싱크대 거름망 매번 솔로 닦고 있는 사람? 🙋\n\n일회용 배수구 거름망이라는 게 있더라\n거름망 위에 씌워두고\n찌꺼기 차면 통째로 빼서 버리면 끝\n\n다이소 주방 코너에 있음\n설거지 끝나고 제일 하기 싫던 일이 사라짐ㅋㅋ"],
+  ["틈새 청소솔", "창틀이랑 욕실 줄눈 뭘로 닦아?\n\n칫솔로 하다가 손목 나갈 뻔한 사람 나야 나ㅋㅋ\n\n얇고 길쭉한 틈새 청소솔 있더라\n창틀, 수전 틈, 줄눈 사이까지 쏙 들어감\n\n다이소 청소용품 코너에 종류별로 있으니까\n한 번 구경해봐"],
+  ["전자레인지 계란찜기", "계란찜 하려고 뚝배기 꺼내는 거 귀찮지 않아?\n\n전자레인지용 계란찜기라는 게 있음\n계란 풀어서 넣고 돌리기만 하면 됨\n\n아침에 바쁠 때 반찬 하나 뚝딱\n이런 건 진짜 아는 사람만 쓰더라ㅋㅋ"],
+  ["지퍼백 스탠드", "지퍼백에 반찬 담다가 다 흘린 적 있음?;;\n\n지퍼백 스탠드라는 게 있는데\n지퍼백을 입 벌린 채로 세워서 잡아줌\n\n양손이 자유로워서 국물 있는 것도 안 흘리고 담을 수 있어\n살림템 저장해둬 📌"],
+  ["문풍지·외풍 차단", "겨울만 되면 창문 근처 발 시린 집? 🥶\n\n문틈이랑 창틀에 붙이는 문풍지 있잖아\n붙이기만 하면 틈새 바람이 확 줄어\n\n다이소에 길이별·모양별로 다 있음\n난방비 아끼려면 이거부터 붙여봐"],
+  ["창문 단열 뽁뽁이", "올겨울 난방비 걱정되는 사람 여기 🙋\n\n창문에 뽁뽁이(단열 에어캡) 붙이는 거 알지?\n물 뿌리고 붙이면 끝이라 진짜 쉬움\n\n유리창 쪽 냉기 막는 데 은근 도움 됨\n겨울 오기 전에 미리 붙여두자"],
+  ["실리콘 그릇 덮개", "남은 반찬 랩 씌우는 거 아깝지 않아?\n\n실리콘 덮개라는 게 있는데\n그릇 위에 쭉 늘려서 씌우면 딱 붙음\n\n씻어서 계속 쓸 수 있어서 랩 살 일이 줄어\n크기별로 세트로 파는 것도 있더라"],
+  ["접착식 후크", "벽에 못 박기 싫은 자취생들 주목 👀\n\n접착식 후크 하나면\n주방, 욕실, 현관에 다 걸 수 있음\n\n무게 버티는 정도가 제품마다 다르니까\n뒷면에 적힌 하중 꼭 보고 골라\n\n이것만 잘 써도 수납이 확 달라짐"],
+  ["멀티탭 정리함", "TV 뒤에 전선 엉킨 거 보면 스트레스 받는 사람?ㅋㅋ\n\n멀티탭 정리함에 넣어두면\n선 정리도 되고 먼지도 덜 쌓여\n\n다이소에 크기별로 있으니까\n멀티탭 길이 재고 가면 됨 📏"],
+  ["세탁망", "니트 빨았다가 줄어든 적 있는 사람 손 🙋\n\n세탁망에 넣어서 돌리면\n옷끼리 엉키는 것도 줄고 늘어나는 것도 덜해\n\n속옷용, 니트용, 양말용 크기별로 따로 있음\n겨울 옷 빨기 전에 하나 챙겨둬"],
+  ["냉장고 정리 트레이", "냉장고 열 때마다 뭐가 어딨는지 모르는 집?;;\n\n투명 정리 트레이 몇 개 넣어서\n소스, 반찬, 음료 칸만 나눠도\n냉장고가 완전 달라 보임\n\n손잡이 달린 거 고르면 꺼내기도 편해\n저장해두고 다이소 갈 때 써먹어 📌"],
+  ["정전기 먼지떨이", "TV랑 선반 위 먼지 물티슈로 닦고 있어?\n\n정전기 먼지떨이 쓰면\n먼지가 날리지 않고 그대로 붙어 나와\n\n손 안 닿는 냉장고 위나 에어컨 위도\n연장봉 달린 거 쓰면 편함ㅋㅋ"],
+];
+
 const HONEY_NAMES = ["왜 이제 알았지", "이게 뭐지 (신기템)", "저장 유도 (체크리스트)"];
 function honeyList(it) {
   return /다이소/.test((it.name || "") + (it.comment || "")) ? [HONEY_STORE, ...HONEY] : HONEY;
@@ -502,6 +518,20 @@ function aiPromptFor(it) {
 
 const RECRUIT_NAMES = ["가격 비교 후킹", "물가 공감", "품절 아쉬움", "아침 루틴", "비밀 공유", "질문으로 댓글 유도"];
 const INFO_NAMES = ["휴지 고르는 법", "대용량 함정", "세제 비교법", "쿠팡 가격 변동", "골드박스", "반품마켓", "한 달 생필품 비용", "질문 (댓글 유도)", "할인율 함정", "체크리스트 (저장 유도)"];
+// 정보형: 절약 정보 글과 미리 넣어둔 꿀템 글을 번갈아 보여줘요 → [이름, 글]
+function infoAll() {
+  const out = [];
+  for (let i = 0; i < Math.max(TH.info.length, HONEY_BUILTIN.length); i++) {
+    if (TH.info[i]) out.push([INFO_NAMES[i], TH.info[i]]);
+    if (HONEY_BUILTIN[i]) out.push(["꿀템: " + HONEY_BUILTIN[i][0], HONEY_BUILTIN[i][1]]);
+  }
+  return out;
+}
+// 꿀템 소개형에 쓸 상품: 직접 고른 꿀템 → 가장 최근 꿀템 → 없으면 미리 넣어둔 꿀템 글
+function honeyItem() {
+  const picked = state.threadsKey && state.items.find((i) => i.honey && itemKey(i) === state.threadsKey);
+  return picked || [...state.items].reverse().find((i) => i.honey) || null;
+}
 const TH_TIPS = {
   honey: "링크·홍보 없는 꿀템 소개 글이에요. 직접 찍은 사진을 꼭 같이 올리면 훨씬 사실적이에요. 좋은 점은 상품의 '한마디'에 적은 내용이 들어가요(직접 써본 것만 적기).",
   hook: "강의 스타일: 첫 줄 후킹 + 반말 3~6줄 + 가격을 이야기 속에. 🎲 다른 문구로 1·2·3번 버전이 바뀌어요. 더 다양하게 쓰려면 [🤖 AI 프롬프트 복사] → 챗GPT에 붙여넣기.",
@@ -734,10 +764,10 @@ function renderThreads() {
     : { name: "햇반 24개", price: "○○원", deal: "개당 ○○원" };
   const L = [];
 
-  if (type === "info") return pick(TH.info, s); // 홍보 문구·링크 없이 정보만
+  if (type === "info") return pick(infoAll(), s)[1]; // 홍보 문구·링크 없이 정보만
   if (type === "honey") {
-    if (!best) return "(위 ① 상품 추가에서 '🛍️ 꿀템 소개용'을 체크하고 상품을 담으면 글이 만들어져요)";
-    return honeyPost(best, s); // 정보형처럼 홍보 문구·링크 없이
+    const h = honeyItem();
+    return h ? honeyPost(h, s) : pick(HONEY_BUILTIN, s)[1]; // 정보형처럼 홍보 문구·링크 없이
   }
   if (type === "hook") {
     if (!best) return "(보관함에 상품을 담으면 후킹 글이 만들어져요)";
@@ -867,9 +897,9 @@ function draw() {
     list.append(box);
   });
   document.querySelectorAll("#threadsTabs button").forEach((b) => b.classList.toggle("on", b.dataset.type === state.threadsType));
-  const honeyIt = state.threadsType === "honey" ? bestItem() : null;
-  const styleNames = state.threadsType === "recruit" ? RECRUIT_NAMES : state.threadsType === "info" ? INFO_NAMES : state.threadsType === "hook" ? HOOK_VER
-    : honeyIt ? (honeyList(honeyIt).length > HONEY.length ? ["다이소 꿀템", ...HONEY_NAMES] : HONEY_NAMES) : null;
+  const honeyIt = state.threadsType === "honey" ? honeyItem() : null;
+  const styleNames = state.threadsType === "recruit" ? RECRUIT_NAMES : state.threadsType === "info" ? infoAll().map((x) => x[0]) : state.threadsType === "hook" ? HOOK_VER
+    : state.threadsType === "honey" ? (honeyIt ? (honeyList(honeyIt).length > HONEY.length ? ["다이소 꿀템", ...HONEY_NAMES] : HONEY_NAMES) : HONEY_BUILTIN.map((x) => "추천 꿀템: " + x[0])) : null;
   const hookItem = state.threadsType === "hook" ? bestItem() : null;
   $("threadsTip").textContent = "💡 " + (hookItem ? `상품 종류: ${HOOK_KIND_NAME[hookKind(hookItem).kind]} · ` : "") + (styleNames
     ? `지금 글: ${styleNames[Math.abs(state.threadsSeed) % styleNames.length]} · ` : "") + TH_TIPS[state.threadsType];
@@ -909,7 +939,7 @@ function draw() {
     }
   });
   if (state.threadsType === "recruit") tp.textContent = "방 모집글은 상품 사진 없이 올려요. 카톡방 캡처(닉네임 가리기)를 붙이면 더 좋아요";
-  else if (state.threadsType === "info") tp.textContent = "정보 글은 사진 없이 올려도 돼요. 직접 찍은 생필품 사진을 붙이면 더 좋아요";
+  else if (state.threadsType === "info" || (state.threadsType === "honey" && !tItems.length)) tp.textContent = "꿀템 글은 그 물건을 직접 찍은 사진(집에서 쓰는 모습, 매장 진열대)을 붙이면 훨씬 사실적이에요";
   else if (!tItems.length) tp.textContent = "보관함에 상품을 담으면 여기에 사진이 나와요";
   $("threadsOut").textContent = renderThreads();
   $("threadsComment").textContent = renderThreadsComment() || "(정보형·꿀템 소개형은 첫 댓글에 카톡방 링크를 달지 않아요. 홍보 없는 글이어야 노출이 잘 돼요)";
@@ -1307,6 +1337,7 @@ async function shareItems(items, text) {
 // 스레드 글에 들어가는 상품 (리스트형은 최대 5개, 나머지는 가장 좋은 상품 1개)
 function threadsItems() {
   if (state.threadsType === "recruit" || state.threadsType === "info") return [];
+  if (state.threadsType === "honey") { const h = honeyItem(); return h ? [h] : []; }
   if (state.threadsType === "list") return state.items.slice(-5).reverse();
   const b = bestItem();
   return b ? [b] : [];
