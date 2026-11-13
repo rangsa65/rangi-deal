@@ -252,6 +252,7 @@
         <button data-type="recruit">📣 방 모집형 (상품 없이)</button>
         <button data-type="hook">🔥 후킹형 (강의 스타일)</button>
         <button data-type="honey">🛍️ 꿀템 소개형 (사진+정보)</button>
+        <button data-type="review">✍️ 한마디 후기형</button>
         <button data-type="proof" class="on">① 가격 증거형</button>
         <button data-type="empathy">② 공감형</button>
         <button data-type="list">③ 리스트형</button>
@@ -420,6 +421,28 @@ const HONEY_BUILTIN = [
   ["정전기 먼지떨이", "TV랑 선반 위 먼지 물티슈로 닦고 있어?\n\n정전기 먼지떨이 쓰면\n먼지가 날리지 않고 그대로 붙어 나와\n\n손 안 닿는 냉장고 위나 에어컨 위도\n연장봉 달린 거 쓰면 편함ㅋㅋ"],
 ];
 
+// ✍️ 한마디 후기형: 직접 써본 사람이 '한마디'에 적은 느낌을 후기 말투로 (앱이 경험을 지어내지 않아요)
+const REVIEW = [
+  "이거 써보고 진짜 놀람 ㄷㄷ\n\n{short}\n{point}\n\n왜 이제 샀나 싶음ㅋㅋ",
+  "솔직 후기 남김 ✍️\n\n{short}\n{point}\n{priceLine}\n\n궁금한 거 있으면 댓글로 물어봐",
+  "처음엔 반신반의했거든?\n\n근데 {short} 써보니까\n{point}\n\n이건 인정할 수밖에 없음;;",
+  "나만 알기 아까워서 올림 🙊\n\n{short}\n{point}\n{priceLine}\n\n살림템 찾는 사람 저장해둬 📌",
+];
+const REVIEW_NAMES = ["써보고 놀람", "솔직 후기", "반신반의 → 인정", "나만 알기 아까움"];
+// 후기형에 쓸 상품: 직접 고른 상품 → 한마디가 적힌 가장 최근 상품 → 가장 최근 상품
+function reviewItem() {
+  const picked = state.threadsKey && state.items.find((i) => itemKey(i) === state.threadsKey);
+  return picked || [...state.items].reverse().find((i) => (i.comment || "").trim()) || state.items[state.items.length - 1] || null;
+}
+function reviewPost(it, s) {
+  const daiso = /다이소/.test(it.name || "");
+  const short = (daiso ? "다이소 " : "") + (it.name || "이거").replace(/다이소\s*/g, "").split(/[,(\[]/)[0].trim().slice(0, 30);
+  const point = (it.comment || "").trim();
+  if (!point) return `(✍️ 후기형은 직접 써본 느낌이 필요해요)\n\n보관함에서 '${short}'의 ✏️ 수정 → 한마디에\n"생각보다 튼튼함", "설거지 시간 줄었음"처럼\n써보고 느낀 점을 한 줄 적어주세요.`;
+  const text = fill(pick(REVIEW, s), { short, point, priceLine: it.price ? `가격은 ${won(it.price)}이었음` : "" });
+  return text.replace(/\n{3,}/g, "\n\n");
+}
+
 const HONEY_NAMES = ["왜 이제 알았지", "이게 뭐지 (신기템)", "저장 유도 (체크리스트)"];
 function honeyList(it) {
   return /다이소/.test((it.name || "") + (it.comment || "")) ? [HONEY_STORE, ...HONEY] : HONEY;
@@ -533,6 +556,7 @@ function honeyItem() {
   return picked || [...state.items].reverse().find((i) => i.honey) || null;
 }
 const TH_TIPS = {
+  review: "직접 써본 상품만 올려요. 상품의 '한마디'에 적은 느낌이 그대로 후기에 들어가요. 쿠팡·토스 제휴 상품이면 카톡방 글처럼 광고 표시도 잊지 마세요.",
   honey: "링크·홍보 없는 꿀템 소개 글이에요. 직접 찍은 사진을 꼭 같이 올리면 훨씬 사실적이에요. 좋은 점은 상품의 '한마디'에 적은 내용이 들어가요(직접 써본 것만 적기).",
   hook: "강의 스타일: 첫 줄 후킹 + 반말 3~6줄 + 가격을 이야기 속에. 🎲 다른 문구로 1·2·3번 버전이 바뀌어요. 더 다양하게 쓰려면 [🤖 AI 프롬프트 복사] → 챗GPT에 붙여넣기.",
   info: "홍보·링크 없는 정보 글이에요. 계정 초반 1~2주는 이것만 올리고, 다른 사람 글에 댓글도 꾸준히 달아주세요. 주제 태그는 생활꿀팁·절약·살림 중 하나를 달아요.",
@@ -765,6 +789,13 @@ function renderThreads() {
   const L = [];
 
   if (type === "info") return pick(infoAll(), s)[1]; // 홍보 문구·링크 없이 정보만
+  if (type === "review") {
+    const r = reviewItem();
+    if (!r) return "(보관함에 써본 상품을 담고, 한마디에 느낀 점을 적으면 후기 글이 만들어져요)";
+    L.push(reviewPost(r, s));
+    if (!r.honey && (r.comment || "").trim()) L.push("", pick(TH.close, s + 2)); // 꿀템(링크 없음)은 홍보 문구 없이
+    return L.join("\n");
+  }
   if (type === "honey") {
     const h = honeyItem();
     return h ? honeyPost(h, s) : pick(HONEY_BUILTIN, s)[1]; // 정보형처럼 홍보 문구·링크 없이
@@ -818,6 +849,7 @@ function renderThreads() {
 
 function renderThreadsComment() {
   if (state.threadsType === "info" || state.threadsType === "honey") return ""; // 정보형·꿀템형은 링크 댓글 없이
+  if (state.threadsType === "review") { const r = reviewItem(); if (!r || r.honey) return ""; }
   const room = state.settings.roomName ? state.settings.roomName + "\n" : "";
   return fill(pick(TH.comment, state.threadsSeed), { room, link: roomLinkText() });
 }
@@ -898,7 +930,7 @@ function draw() {
   });
   document.querySelectorAll("#threadsTabs button").forEach((b) => b.classList.toggle("on", b.dataset.type === state.threadsType));
   const honeyIt = state.threadsType === "honey" ? honeyItem() : null;
-  const styleNames = state.threadsType === "recruit" ? RECRUIT_NAMES : state.threadsType === "info" ? infoAll().map((x) => x[0]) : state.threadsType === "hook" ? HOOK_VER
+  const styleNames = state.threadsType === "review" ? REVIEW_NAMES : state.threadsType === "recruit" ? RECRUIT_NAMES : state.threadsType === "info" ? infoAll().map((x) => x[0]) : state.threadsType === "hook" ? HOOK_VER
     : state.threadsType === "honey" ? (honeyIt ? (honeyList(honeyIt).length > HONEY.length ? ["다이소 꿀템", ...HONEY_NAMES] : HONEY_NAMES) : HONEY_BUILTIN.map((x) => "추천 꿀템: " + x[0])) : null;
   const hookItem = state.threadsType === "hook" ? bestItem() : null;
   $("threadsTip").textContent = "💡 " + (hookItem ? `상품 종류: ${HOOK_KIND_NAME[hookKind(hookItem).kind]} · ` : "") + (styleNames
@@ -1338,6 +1370,7 @@ async function shareItems(items, text) {
 function threadsItems() {
   if (state.threadsType === "recruit" || state.threadsType === "info") return [];
   if (state.threadsType === "honey") { const h = honeyItem(); return h ? [h] : []; }
+  if (state.threadsType === "review") { const r = reviewItem(); return r ? [r] : []; }
   if (state.threadsType === "list") return state.items.slice(-5).reverse();
   const b = bestItem();
   return b ? [b] : [];
