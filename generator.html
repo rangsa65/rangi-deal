@@ -448,6 +448,11 @@ function honeyList(it) {
   return /다이소/.test((it.name || "") + (it.comment || "")) ? [HONEY_STORE, ...HONEY] : HONEY;
 }
 function honeyPost(it, s) {
+  // 추천 꿀템에서 쿠팡 사진을 가져온 상품: 한마디가 없으면 미리 넣어둔 글을 써요 (쿠팡 상품이면 '다이소' 줄은 빼요)
+  if (it.builtin && !(it.comment || "").trim()) {
+    const t = it.link ? it.builtin.split("\n").filter((l) => !/다이소/.test(l)).join("\n") : it.builtin;
+    return t.replace(/\n{3,}/g, "\n\n").trim();
+  }
   const list = honeyList(it);
   const daiso = list.length > HONEY.length;
   const short = (it.name || "이거").replace(/다이소\s*/g, "").split(/[,(\[]/)[0].trim().slice(0, 30);
@@ -973,6 +978,15 @@ function draw() {
   if (state.threadsType === "recruit") tp.textContent = "방 모집글은 상품 사진 없이 올려요. 카톡방 캡처(닉네임 가리기)를 붙이면 더 좋아요";
   else if (state.threadsType === "info" || (state.threadsType === "honey" && !tItems.length)) tp.textContent = "꿀템 글은 그 물건을 직접 찍은 사진(집에서 쓰는 모습, 매장 진열대)을 붙이면 훨씬 사실적이에요";
   else if (!tItems.length) tp.textContent = "보관함에 상품을 담으면 여기에 사진이 나와요";
+  // 추천 꿀템 글이면: 쿠팡에서 같은 종류 상품 사진·내 링크 가져오기
+  const bi = currentBuiltin();
+  if (bi) {
+    const b = document.createElement("button");
+    b.className = "primary";
+    b.textContent = `🔗 쿠팡에서 '${bi[0]}' 사진 찾기`;
+    b.onclick = () => findHoneyOnCoupang(bi);
+    tp.append(document.createElement("br"), b);
+  }
   $("threadsOut").textContent = renderThreads();
   $("threadsComment").textContent = renderThreadsComment() || "(정보형·꿀템 소개형은 첫 댓글에 카톡방 링크를 달지 않아요. 홍보 없는 글이어야 노출이 잘 돼요)";
 }
@@ -1016,6 +1030,33 @@ function cancelEdit() {
 // ---------- 쿠팡 골드박스 상품 → 간편 링크 만들기 ----------
 const PENDING = "rangi-pending-link";
 const LINK_PAGE = "https://partners.coupang.com/#affiliate/ws/link-to-any-page";
+
+// 지금 스레드 칸에 보이는 글이 미리 넣어둔 꿀템이면 [이름, 글]을 알려줘요
+function currentBuiltin() {
+  const s = state.threadsSeed;
+  if (state.threadsType === "info") {
+    const e = pick(infoAll(), s);
+    return e[0].startsWith("꿀템: ") ? HONEY_BUILTIN.find((b) => "꿀템: " + b[0] === e[0]) : null;
+  }
+  if (state.threadsType === "honey" && !honeyItem()) return pick(HONEY_BUILTIN, s);
+  return null;
+}
+// 추천 꿀템 → 쿠팡 파트너스에서 같은 종류 상품을 골라 사진·내 링크를 가져와요
+function findHoneyOnCoupang(b) {
+  let it = state.items.find((i) => i.builtin === b[1] && !i.link);
+  if (!it) {
+    it = {
+      link: "", name: b[0], price: 0, orig: 0, platform: "coupang",
+      qty: 0, unit: "개", ship: 0, coupon: "", comment: "", grade: "auto",
+      seed: Math.floor(Math.random() * 1000), needsCheck: false, needsLink: false,
+      searchName: b[0].split("·")[0], honey: true, builtin: b[1], from: "builtin",
+    };
+    state.items.push(it);
+  }
+  state.threadsType = "honey"; state.threadsKey = null;
+  save(); draw();
+  makeLink(it);
+}
 
 function makeLink(it) {
   // 폴센트에서 온 상품: 쿠팡 주소를 모르니 상품명으로 쿠팡 파트너스에서 찾아요
@@ -1161,8 +1202,9 @@ function similarity(a, b) {
 function attachWaitingLink(p) {
   const w = state.items.filter((i) => !i.link && i.awaitLink).sort((a, b) => b.awaitLink - a.awaitLink)[0];
   if (!w || !AFF_COUPANG.test(p.link)) return false;
-  if (p.name && p.name.length > 6 && similarity(p.name, w.name) < 0.3) return false;
+  if (!w.builtin && p.name && p.name.length > 6 && similarity(p.name, w.name) < 0.3) return false;
   w.link = p.link; w.needsLink = false; delete w.awaitLink;
+  if (w.builtin && p.name) w.name = p.name;
   $("importText").value = "";
   save(); draw();
   toast(`🔗 링크 연결 완료: ${w.name}`, 3000);
@@ -1174,8 +1216,11 @@ function resolveAwaiting() {
   let changed = false;
   for (const w of state.items.filter((i) => !i.link && i.searchName)) {
     const wi = state.items.indexOf(w);
-    const t = state.items.find((x, j) => j > wi && x.link && x.platform === "coupang" && similarity(x.name, w.name) >= 0.6);
+    // 추천 꿀템은 이름이 짧고 일반적이라, 기다리는 중에 새로 담긴 쿠팡 상품이면 연결해요
+    const t = state.items.find((x, j) => j > wi && x.link && x.platform === "coupang"
+      && (w.builtin ? w.awaitLink && w.searchName.split(/\s+/).some((k) => k.length >= 2 && x.name.replace(/\s+/g, "").includes(k)) : similarity(x.name, w.name) >= 0.6));
     if (!t) continue;
+    if (w.builtin) { t.honey = true; t.builtin = w.builtin; if (!t.comment) t.comment = w.comment; }
     if (!t.photo && w.photo) t.photo = w.photo;
     if (!t.imgUrl && w.imgUrl) t.imgUrl = w.imgUrl;
     if (!t.orig && w.orig > t.price) t.orig = w.orig;
