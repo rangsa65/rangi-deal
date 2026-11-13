@@ -911,6 +911,7 @@ function draw() {
       mk(pcPhoto ? "📝 글만" : "📋 복사", () => it.link ? copy(render(it, state.style)) : toast(it.honey ? "꿀템 소개용은 아래 🧵 스레드용 → 🛍️ 꿀템 소개형에서 올려요" : "먼저 🔗 링크 만들기를 해주세요"), it.link && !pcPhoto ? "primary" : ""),
       mk("🎲 다른 문구", () => { it.seed++; save(); draw(); }),
       mk(hasPhoto ? "📷 사진 바꾸기" : "📷 사진 넣기", () => pickPhoto(it)),
+      ...(CAN_SHARE && !hasPhoto ? [mk("📋 복사한 사진 붙이기", () => pastePhoto(it))] : []),
       mk("✏️ 수정", () => startEdit(idx)),
       mk("삭제", () => { if (editingIdx === idx) cancelEdit(); state.items.splice(idx, 1); save(); draw(); }, "danger"),
     );
@@ -972,7 +973,10 @@ function draw() {
       const b = document.createElement("button");
       b.textContent = "📷 " + (it.name || "상품").slice(0, 12) + " 사진 넣기";
       b.onclick = () => pickPhoto(it);
-      tp.append(b);
+      const b2 = document.createElement("button");
+      b2.textContent = "📋 복사한 사진 붙이기";
+      b2.onclick = () => pastePhoto(it);
+      tp.append(b, b2);
     }
   });
   if (state.threadsType === "recruit") tp.textContent = "방 모집글은 상품 사진 없이 올려요. 카톡방 캡처(닉네임 가리기)를 붙이면 더 좋아요";
@@ -1067,7 +1071,7 @@ function makeLink(it) {
     navigator.clipboard.writeText(it.searchName).catch(() => {});
     window.open("https://partners.coupang.com/", "_blank");
     toast(CAN_SHARE && it.builtin
-      ? "이름을 복사했어요. 파트너스 검색 → 상품 사진을 꾹 눌러 [이미지 공유 → 랑이 특가 자동화] → [링크 생성 → URL 복사] 후 앱에 붙여넣기"
+      ? "이름을 복사했어요. 파트너스 검색 → 상품 사진 꾹 눌러 [이미지 복사] → 앱에서 [📋 복사한 사진 붙이기] → 다시 [링크 생성 → URL 복사] 후 앱에 붙여넣기"
       : CAN_SHARE
       ? "상품명을 복사했어요. 파트너스 검색창에 붙여넣고 같은 상품의 [링크 생성] → [URL 복사] → 이 앱에 돌아와 붙여넣으면 연결돼요"
       : "상품명을 복사했어요. 파트너스 검색창에 Ctrl+V → 같은 상품의 [링크 생성] → [URL 복사] 하면 자동으로 연결돼요", 7000);
@@ -1282,6 +1286,27 @@ async function fileToPhoto(blob) {
   g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
   g.drawImage(bmp, 0, 0, c.width, c.height);
   return c.toDataURL("image/jpeg", 0.82);
+}
+
+// 다른 곳에서 사진을 꾹 눌러 [이미지 복사]한 뒤 → 이 버튼으로 상품에 붙여요
+async function pastePhoto(it) {
+  try {
+    const items = await navigator.clipboard.read();
+    let blob = null;
+    for (const ci of items) {
+      const type = ci.types.find((t) => t.startsWith("image/"));
+      if (type) { blob = await ci.getType(type); break; }
+    }
+    if (!blob) return toast("복사한 사진이 없어요. 사진을 꾹 눌러 [이미지 복사]를 먼저 해주세요", 4000);
+    const url = await fileToPhoto(blob);
+    const t = findSame(it);
+    if (!t) return toast("상품을 찾지 못했어요. 다시 해주세요");
+    t.photo = url;
+    if (save()) toast("📷 사진을 넣었어요");
+    draw();
+  } catch (e) {
+    toast("사진을 붙이지 못했어요. 붙여넣기를 [허용]해 주시거나, 사진을 저장해서 📷 사진 넣기로 넣어주세요", 5000);
+  }
 }
 
 let photoTarget = null;
