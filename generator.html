@@ -1071,7 +1071,7 @@ function makeLink(it) {
     navigator.clipboard.writeText(it.searchName).catch(() => {});
     window.open("https://partners.coupang.com/", "_blank");
     toast(CAN_SHARE && it.builtin
-      ? "이름을 복사했어요. 파트너스 검색 → 상품 사진 꾹 눌러 [이미지 복사] → 앱에서 [📋 복사한 사진 붙이기] → 다시 [링크 생성 → URL 복사] 후 앱에 붙여넣기"
+      ? "이름을 복사했어요. 파트너스 검색 → 상품을 눌러 큰 사진을 꾹 눌러 [이미지 복사] → 앱에서 [📋 복사한 사진 붙이기] → 다시 [링크 생성 → URL 복사] 후 앱에 붙여넣기"
       : CAN_SHARE
       ? "상품명을 복사했어요. 파트너스 검색창에 붙여넣고 같은 상품의 [링크 생성] → [URL 복사] → 이 앱에 돌아와 붙여넣으면 연결돼요"
       : "상품명을 복사했어요. 파트너스 검색창에 Ctrl+V → 같은 상품의 [링크 생성] → [URL 복사] 하면 자동으로 연결돼요", 7000);
@@ -1275,17 +1275,20 @@ async function shareText(text) {
 }
 
 // ---------- 상품 사진 ----------
-// 사진은 가로·세로 720px 안으로 줄여서 저장해요 (상품 하나에 100KB 안팎)
+// 사진은 가로·세로 1200px 안으로 줄여서 저장해요 (스레드에 올려도 선명하게)
+let lastPhotoSmall = false; // 방금 넣은 사진이 작은 썸네일이면 알려주려고
+const SMALL_PHOTO_TIP = "📷 사진은 넣었는데 원본이 작아서 흐릴 수 있어요. 목록 사진 말고 상품을 눌러 상세 화면의 큰 사진을 복사하면 선명해요";
 async function fileToPhoto(blob) {
   const bmp = await createImageBitmap(blob);
-  const k = Math.min(1, 720 / Math.max(bmp.width, bmp.height));
+  lastPhotoSmall = Math.max(bmp.width, bmp.height) < 500;
+  const k = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas");
   c.width = Math.max(1, Math.round(bmp.width * k));
   c.height = Math.max(1, Math.round(bmp.height * k));
   const g = c.getContext("2d");
   g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
   g.drawImage(bmp, 0, 0, c.width, c.height);
-  return c.toDataURL("image/jpeg", 0.82);
+  return c.toDataURL("image/jpeg", 0.9);
 }
 
 // 다른 곳에서 사진을 꾹 눌러 [이미지 복사]한 뒤 → 이 버튼으로 상품에 붙여요
@@ -1302,7 +1305,7 @@ async function pastePhoto(it) {
     const t = findSame(it);
     if (!t) return toast("상품을 찾지 못했어요. 다시 해주세요");
     t.photo = url;
-    if (save()) toast("📷 사진을 넣었어요");
+    if (save()) toast(lastPhotoSmall ? SMALL_PHOTO_TIP : "📷 사진을 넣었어요", lastPhotoSmall ? 6000 : 2500);
     draw();
   } catch (e) {
     toast("사진을 붙이지 못했어요. 붙여넣기를 [허용]해 주시거나, 사진을 저장해서 📷 사진 넣기로 넣어주세요", 5000);
@@ -1324,7 +1327,7 @@ $("photoInput").addEventListener("change", async () => {
     photoTarget = null;
     if (!t) return toast("상품을 찾지 못했어요. 다시 해주세요");
     t.photo = url;
-    if (save()) toast("📷 사진을 넣었어요");
+    if (save()) toast(lastPhotoSmall ? SMALL_PHOTO_TIP : "📷 사진을 넣었어요", lastPhotoSmall ? 6000 : 2500);
     draw();
   } catch (e) { toast("사진을 읽지 못했어요. 다른 사진으로 해주세요"); }
 });
@@ -1343,7 +1346,7 @@ async function attachSharedPhoto() {
       || rev.find((i) => !i.photo && !i.imgUrl) || rev[0];
     if (!t) return toast("먼저 상품을 담고 사진을 보내주세요", 4000);
     t.photo = url;
-    if (save()) toast(`📷 '${(t.name || "상품").slice(0, 20)}'에 사진을 넣었어요`, 3500);
+    if (save()) toast(lastPhotoSmall ? SMALL_PHOTO_TIP : `📷 '${(t.name || "상품").slice(0, 20)}'에 사진을 넣었어요`, lastPhotoSmall ? 6000 : 3500);
     draw();
   } catch (e) { toast("공유한 사진을 읽지 못했어요. 📷 사진 넣기로 넣어주세요", 4000); }
 }
