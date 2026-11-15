@@ -1425,7 +1425,9 @@ async function pastePhoto(it) {
       if (type) { blob = await ci.getType(type); break; }
     }
     if (!blob) return toast("복사한 사진이 없어요. 사진을 꾹 눌러 [이미지 복사]를 먼저 해주세요", 4000);
-    const url = await fileToPhoto(blob);
+    const cropped = await cropPhoto(blob);
+    if (!cropped) return;
+    const url = await fileToPhoto(cropped);
     const t = findSame(it);
     if (!t) return toast("상품을 찾지 못했어요. 다시 해주세요");
     t.photo = url;
@@ -1434,6 +1436,82 @@ async function pastePhoto(it) {
   } catch (e) {
     toast("사진을 붙이지 못했어요. 붙여넣기를 [허용]해 주시거나, 사진을 저장해서 📷 사진 넣기로 넣어주세요", 5000);
   }
+}
+
+// ---------- 사진 자르기: 고른 사진에서 네모(정사각형)로 원하는 부분만 ----------
+// 끝나면 잘린 사진(Blob), [그대로 쓰기]면 원래 사진, [취소]면 null
+function cropPhoto(blob) {
+  return new Promise(async (resolve) => {
+    let bmp;
+    try { bmp = await createImageBitmap(blob); } catch (e) { return resolve(blob); }
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;z-index:9999;background:#151515;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;touch-action:none;user-select:none";
+    const tip = document.createElement("div");
+    tip.textContent = "✂️ 네모를 끌어서 옮기고, 아래 막대로 크기를 바꿔요";
+    tip.style.cssText = "color:#fff;font-size:14px;text-align:center";
+    const cw0 = Math.min(window.innerWidth - 32, 560), ch0 = window.innerHeight * 0.58;
+    const k = Math.min(cw0 / bmp.width, ch0 / bmp.height);
+    const cw = Math.round(bmp.width * k), ch = Math.round(bmp.height * k);
+    const wrap = document.createElement("div");
+    wrap.style.cssText = `position:relative;width:${cw}px;height:${ch}px;overflow:hidden;touch-action:none`;
+    const cv = document.createElement("canvas");
+    cv.width = cw; cv.height = ch; cv.style.cssText = "display:block;width:100%;height:100%";
+    cv.getContext("2d").drawImage(bmp, 0, 0, cw, ch);
+    const box = document.createElement("div");
+    box.style.cssText = "position:absolute;border:2px solid #f2c300;box-shadow:0 0 0 9999px rgba(0,0,0,.55);cursor:move;touch-action:none";
+    wrap.append(cv, box);
+    const minSide = Math.min(cw, ch);
+    let size = minSide * 0.85, x = (cw - size) / 2, y = (ch - size) / 2;
+    const place = () => {
+      size = Math.max(40, Math.min(size, minSide));
+      x = Math.max(0, Math.min(x, cw - size)); y = Math.max(0, Math.min(y, ch - size));
+      Object.assign(box.style, { left: x + "px", top: y + "px", width: size + "px", height: size + "px" });
+    };
+    place();
+    // 끌어서 옮기기 (네모 밖을 누르면 그 자리로 네모가 와요)
+    let drag = null;
+    wrap.addEventListener("pointerdown", (e) => {
+      const r = wrap.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
+      if (e.target !== box) { x = px - size / 2; y = py - size / 2; place(); }
+      drag = { px, py, x, y };
+      wrap.setPointerCapture(e.pointerId);
+    });
+    wrap.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const r = wrap.getBoundingClientRect();
+      x = drag.x + (e.clientX - r.left - drag.px); y = drag.y + (e.clientY - r.top - drag.py); place();
+    });
+    wrap.addEventListener("pointerup", () => { drag = null; });
+    wrap.addEventListener("pointercancel", () => { drag = null; });
+    const range = document.createElement("input");
+    range.type = "range"; range.min = "20"; range.max = "100"; range.value = "85";
+    range.style.cssText = "width:min(560px,90vw)";
+    range.oninput = () => {
+      const cx = x + size / 2, cy = y + size / 2;
+      size = minSide * range.value / 100; x = cx - size / 2; y = cy - size / 2; place();
+    };
+    const btns = document.createElement("div");
+    btns.style.cssText = "display:flex;gap:8px;flex-wrap:wrap;justify-content:center";
+    const mkb = (label, primary, fn) => {
+      const b = document.createElement("button");
+      b.textContent = label; if (primary) b.className = "primary";
+      b.onclick = fn; btns.append(b);
+    };
+    const finish = (v) => { ov.remove(); resolve(v); };
+    mkb("✂️ 이대로 자르기", true, () => {
+      const s = size / k, out = Math.round(Math.min(s, 1080));
+      const c = document.createElement("canvas");
+      c.width = c.height = out;
+      const g = c.getContext("2d");
+      g.fillStyle = "#fff"; g.fillRect(0, 0, out, out);
+      g.drawImage(bmp, x / k, y / k, s, s, 0, 0, out, out);
+      c.toBlob((b) => finish(b || blob), "image/jpeg", 0.92);
+    });
+    mkb("그대로 쓰기", false, () => finish(blob));
+    mkb("취소", false, () => finish(null));
+    ov.append(tip, wrap, range, btns);
+    document.body.append(ov);
+  });
 }
 
 // 스레드 글에 직접 붙이는 사진 (보관함 상품과 상관없이, 지금 보이는 글에만)
@@ -1457,7 +1535,9 @@ $("photoInput").addEventListener("change", async () => {
   const f = $("photoInput").files[0];
   if (!f || !photoTarget) return;
   try {
-    const url = await fileToPhoto(f);
+    const cropped = await cropPhoto(f);
+    if (!cropped) { photoTarget = null; return; }
+    const url = await fileToPhoto(cropped);
     const t = findSame(photoTarget);
     photoTarget = null;
     if (!t) return toast("상품을 찾지 못했어요. 다시 해주세요");
