@@ -997,6 +997,7 @@ function draw() {
   }
   $("threadsOut").textContent = renderThreads();
   $("threadsComment").textContent = renderThreadsComment() || "(정보형·꿀템 소개형은 첫 댓글에 카톡방 링크를 달지 않아요. 홍보 없는 글이어야 노출이 잘 돼요)";
+  setTimeout(warmShareFiles, 300);
 }
 
 function readForm() {
@@ -1370,20 +1371,20 @@ async function shareText(text) {
 }
 
 // ---------- 상품 사진 ----------
-// 사진은 가로·세로 1200px 안으로 줄여서 저장해요 (스레드에 올려도 선명하게)
+// 사진은 가로·세로 1080px 안으로 줄여서 저장해요 (스레드에 올려도 선명하게)
 let lastPhotoSmall = false; // 방금 넣은 사진이 작은 썸네일이면 알려주려고
 const SMALL_PHOTO_TIP = "📷 사진은 넣었는데 원본이 작아서 흐릴 수 있어요. 목록 사진 말고 상품을 눌러 상세 화면의 큰 사진을 복사하면 선명해요";
 async function fileToPhoto(blob) {
   const bmp = await createImageBitmap(blob);
   lastPhotoSmall = Math.max(bmp.width, bmp.height) < 500;
-  const k = Math.min(1, 1200 / Math.max(bmp.width, bmp.height));
+  const k = Math.min(1, 1080 / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas");
   c.width = Math.max(1, Math.round(bmp.width * k));
   c.height = Math.max(1, Math.round(bmp.height * k));
   const g = c.getContext("2d");
   g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
   g.drawImage(bmp, 0, 0, c.width, c.height);
-  return c.toDataURL("image/jpeg", 0.9);
+  return c.toDataURL("image/jpeg", 0.85);
 }
 
 // 다른 곳에서 사진을 꾹 눌러 [이미지 복사]한 뒤 → 이 버튼으로 상품에 붙여요
@@ -1536,22 +1537,47 @@ window.addEventListener("focus", () => setTimeout(copyPendingText, 150));
 document.addEventListener("pointerdown", () => copyPendingText(), true);
 
 // 휴대폰: 사진과 글을 함께 공유 (카톡은 사진만 받는 경우가 있어서 글은 미리 복사해 둬요)
+// 한 번 만든 사진 파일은 기억해 둬요 → 두 번째 누를 때는 바로 공유 창이 떠요
+const shareFileCache = new Map();
+async function shareFile(it, n) {
+  const key = it.photo || it.imgUrl;
+  if (!key) return null;
+  if (!shareFileCache.has(key)) {
+    const b = await photoBlob(it);
+    if (!b) return null;
+    shareFileCache.set(key, new File([b], `rangi-${n}.jpg`, { type: b.type || "image/jpeg" }));
+  }
+  return shareFileCache.get(key);
+}
+// 다음 공유를 빠르게: 스레드·보관함에 보이는 사진 파일을 미리 만들어 둬요
+function warmShareFiles() {
+  if (!CAN_SHARE) return;
+  [...threadsItems(), ...state.items.slice(-3)].forEach((it, i) => { shareFile(it, i + 1).catch(() => {}); });
+}
 async function shareItems(items, text, doneMsg) {
   const files = [];
+  let missing = 0;
   for (const it of items) {
     if (files.length >= 10) break;
     try {
-      const b = await photoBlob(it);
-      if (b) files.push(new File([b], `rangi-${files.length + 1}.jpg`, { type: b.type || "image/jpeg" }));
-    } catch (e) { /* 사진 없이 공유 */ }
+      const f = await shareFile(it, files.length + 1);
+      if (f) files.push(f); else if (it.photo || it.imgUrl) missing++;
+    } catch (e) { missing++; }
   }
-  if (!files.length || !navigator.canShare || !navigator.canShare({ files })) return shareText(text);
-  try { await navigator.clipboard.writeText(text); } catch (e) {}
+  if (!files.length || !navigator.canShare || !navigator.canShare({ files })) {
+    if (missing) toast("사진을 불러오지 못해서 글만 공유해요. [📷 사진 바꾸기]로 사진을 다시 넣어주세요", 5000);
+    return shareText(text);
+  }
+  // 글은 기다리지 않고 복사해요 (기다리면 폰이 '버튼 누른 지 오래됐다'며 공유를 막아요)
+  navigator.clipboard.writeText(text).catch(() => {});
   try {
     await navigator.share({ files, text });
     toast(doneMsg || "글도 복사돼 있어요. 사진만 보내졌으면 대화창을 길게 눌러 붙여넣기 하세요", 6000);
   } catch (e) {
-    if (e.name !== "AbortError") shareText(text);
+    if (e.name === "AbortError") return;
+    // 사진 준비가 오래 걸려서 막혔으면: 이제 준비가 끝났으니 한 번 더 누르면 바로 떠요
+    if (e.name === "NotAllowedError") return toast("📷 사진 준비 완료! 같은 버튼을 한 번 더 눌러주세요", 5000);
+    shareText(text);
   }
 }
 
