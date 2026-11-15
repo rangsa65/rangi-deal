@@ -982,6 +982,24 @@ function draw() {
   if (state.threadsType === "recruit") tp.textContent = "방 모집글은 상품 사진 없이 올려요. 카톡방 캡처(닉네임 가리기)를 붙이면 더 좋아요";
   else if ((state.threadsType === "info" || state.threadsType === "honey") && !tItems.length) tp.textContent = "꿀템 글은 그 물건을 직접 찍은 사진(집에서 쓰는 모습, 매장 진열대)을 붙이면 훨씬 사실적이에요";
   else if (!tItems.length) tp.textContent = "보관함에 상품을 담으면 여기에 사진이 나와요";
+  // 이 글에 직접 사진 붙이기 (상품 사진이 없을 때)
+  if (state.threadsPhoto) {
+    tp.replaceChildren();
+    const img = document.createElement("img");
+    img.className = "thumb"; img.alt = ""; img.src = state.threadsPhoto;
+    const x = document.createElement("button");
+    x.textContent = "✖ 사진 빼기";
+    x.onclick = () => { state.threadsPhoto = ""; save(); draw(); };
+    tp.append(img, x);
+  } else if (!tItems.some((i) => i.photo || i.imgUrl)) {
+    const p1 = document.createElement("button");
+    p1.textContent = "📷 이 글에 사진 넣기";
+    p1.onclick = () => pickPhoto(POST_PHOTO);
+    const p2 = document.createElement("button");
+    p2.textContent = "📋 복사한 사진 붙이기";
+    p2.onclick = () => pastePhoto(POST_PHOTO);
+    tp.append(document.createElement("br"), p1, p2);
+  }
   // 추천 꿀템 글이면: 쿠팡에서 같은 종류 상품 사진·내 링크 가져오기
   const bi = currentBuiltin();
   if (bi) {
@@ -1344,6 +1362,7 @@ function resolveAwaiting() {
 
 // 보관함이 다시 불러와져도 같은 상품을 찾아요
 function findSame(it) {
+  if (it && it.isPost) return it;
   return state.items.includes(it) ? it
     : state.items.find((x) => x.seed === it.seed && x.name === it.name && x.price === it.price) || null;
 }
@@ -1415,6 +1434,17 @@ async function pastePhoto(it) {
   } catch (e) {
     toast("사진을 붙이지 못했어요. 붙여넣기를 [허용]해 주시거나, 사진을 저장해서 📷 사진 넣기로 넣어주세요", 5000);
   }
+}
+
+// 스레드 글에 직접 붙이는 사진 (보관함 상품과 상관없이, 지금 보이는 글에만)
+const POST_PHOTO = {
+  isPost: true, name: "이 글",
+  get photo() { return state.threadsPhoto || ""; },
+  set photo(v) { state.threadsPhoto = v; },
+};
+function threadsShareItems() {
+  const items = threadsItems();
+  return state.threadsPhoto ? [POST_PHOTO, ...items.filter((i) => !(i.photo || i.imgUrl))] : items;
 }
 
 let photoTarget = null;
@@ -1561,7 +1591,7 @@ async function shareFile(it, n) {
 // 다음 공유를 빠르게: 스레드·보관함에 보이는 사진 파일을 미리 만들어 둬요
 function warmShareFiles() {
   if (!CAN_SHARE) return;
-  [...threadsItems(), ...state.items.slice(-3)].forEach((it, i) => { shareFile(it, i + 1).catch(() => {}); });
+  [...threadsShareItems(), ...state.items.slice(-3)].forEach((it, i) => { shareFile(it, i + 1).catch(() => {}); });
 }
 async function shareItems(items, text, doneMsg) {
   const files = [];
@@ -1671,7 +1701,7 @@ $("shareAll").onclick = () => {
   const text = renderAll();
   text ? shareItems(state.items.filter((i) => i.link), text) : toast("제휴 링크가 있는 상품이 없어요");
 };
-$("shareThreads").onclick = () => shareItems(threadsItems(), renderThreads());
+$("shareThreads").onclick = () => shareItems(threadsShareItems(), renderThreads());
 $("copyAll").onclick = async () => {
   if (!state.items.length) return toast("보관함이 비어 있어요");
   const missing = state.items.filter((i) => !i.link).length;
@@ -1681,7 +1711,7 @@ $("copyAll").onclick = async () => {
   if (missing && CAN_SHARE) toast(`복사했어요! 링크 없는 상품 ${missing}개는 빠졌어요`, 3000);
 };
 $("copyThreadsPhoto").hidden = CAN_SHARE;
-$("copyThreadsPhoto").onclick = () => copyWithPhoto(threadsItems(), renderThreads());
+$("copyThreadsPhoto").onclick = () => copyWithPhoto(threadsShareItems(), renderThreads());
 $("copyThreadsBody").onclick = () => copy(renderThreads());
 $("copyThreadsComment").onclick = () => renderThreadsComment() ? copy(renderThreadsComment()) : toast("정보형은 첫 댓글 없이 올려요");
 // 스레드 글쓰기 화면을 본문이 채워진 채로 열어요. [게시]는 직접 눌러요.
@@ -1691,7 +1721,7 @@ $("postThreads").onclick = async () => {
   const comment = renderThreadsComment();
   // 휴대폰: 스레드 바로가기 주소로는 사진을 못 넘겨요 → 사진이 있으면 공유 창으로 사진+글을 같이 보내요
   if (CAN_SHARE) {
-    const items = threadsItems().filter((i) => i.photo || i.imgUrl);
+    const items = threadsShareItems().filter((i) => i.photo || i.imgUrl);
     if (items.length) {
       toast("공유 목록에서 [Threads]를 골라주세요", 3000);
       return shareItems(items, body, "글도 복사돼 있어요. 스레드에 사진만 들어갔으면 글쓰기 칸을 꾹 눌러 [붙여넣기] 하세요"
@@ -1699,7 +1729,7 @@ $("postThreads").onclick = async () => {
     }
   }
   // PC: 사진이 있으면 사진을 복사해 둬요 → 스레드 글쓰기 칸에 Ctrl+V 하면 사진이 붙어요
-  const withPhoto = !CAN_SHARE ? threadsItems().find((i) => i.photo || i.imgUrl) : null;
+  const withPhoto = !CAN_SHARE ? threadsShareItems().find((i) => i.photo || i.imgUrl) : null;
   // 새 창이 열리면 이 화면이 포커스를 잃어 복사가 막히니까, 복사를 먼저 끝내고 열어요
   const photoCopied = withPhoto ? await copyPhoto(withPhoto, true) : false;
   if (!photoCopied && comment.trim()) {
@@ -1729,9 +1759,9 @@ $("aiPrompt").onclick = async () => {
   }
 };
 $("honeyItem").addEventListener("change", () => { $("honeyHint").hidden = !$("honeyItem").checked; });
-$("threadsItem").onchange = (e) => { state.threadsKey = e.target.value || null; save(); draw(); };
-$("rerollThreads").onclick =() => { state.threadsSeed++; save(); draw(); };
-document.querySelectorAll("#threadsTabs button").forEach((b) => (b.onclick = () => { state.threadsType = b.dataset.type; save(); draw(); }));
+$("threadsItem").onchange = (e) => { state.threadsKey = e.target.value || null; state.threadsPhoto = ""; save(); draw(); };
+$("rerollThreads").onclick =() => { state.threadsSeed++; state.threadsPhoto = ""; save(); draw(); };
+document.querySelectorAll("#threadsTabs button").forEach((b) => (b.onclick = () => { state.threadsType = b.dataset.type; state.threadsPhoto = ""; save(); draw(); }));
 $("linkInBody").addEventListener("change", () => { state.settings.linkInBody = $("linkInBody").checked; save(); draw(); });
 $("clearAll").onclick = () => { if (state.items.length && confirm("보관함을 비울까요?")) { state.items = []; save(); draw(); } };
 document.querySelectorAll("#styleTabs button").forEach((b) => (b.onclick = () => { state.style = b.dataset.style; save(); draw(); }));
