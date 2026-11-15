@@ -557,6 +557,7 @@ function infoAll() {
 }
 // 꿀템 소개형에 쓸 상품: 직접 고른 꿀템 → 가장 최근 꿀템 → 없으면 미리 넣어둔 꿀템 글
 function honeyItem() {
+  if (state.honeyFresh) return null; // [🔄 다른 추천 꿀템]을 누르면 보관함 꿀템 대신 추천 꿀템을 보여줘요
   const picked = state.threadsKey && state.items.find((i) => i.honey && itemKey(i) === state.threadsKey);
   return picked || [...state.items].reverse().find((i) => i.honey) || null;
 }
@@ -773,7 +774,7 @@ function bestItem() {
     if (found) return found;
   }
   // 꿀템 소개형은 가장 최근에 담은 꿀템을 먼저 써요
-  if (state.threadsType === "honey") {
+  if (state.threadsType === "honey" && !state.honeyFresh) {
     const h = [...state.items].reverse().find((i) => i.honey);
     if (h) return h;
   }
@@ -991,7 +992,7 @@ function draw() {
     x.textContent = "✖ 사진 빼기";
     x.onclick = () => { state.threadsPhoto = ""; save(); draw(); };
     tp.append(img, x);
-  } else if (!tItems.some((i) => i.photo || i.imgUrl)) {
+  } else if (!tItems.length) {
     const p1 = document.createElement("button");
     p1.textContent = "📷 이 글에 사진 넣기";
     p1.onclick = () => pickPhoto(POST_PHOTO);
@@ -999,6 +1000,26 @@ function draw() {
     p2.textContent = "📋 복사한 사진 붙이기";
     p2.onclick = () => pastePhoto(POST_PHOTO);
     tp.append(document.createElement("br"), p1, p2);
+  }
+  // 꿀템 소개형에서 담아 둔 꿀템이 보이면: 다른 추천 꿀템으로 넘어가거나, 같은 꿀템의 다른 상품 찾기
+  const shown = state.threadsType === "honey" ? honeyItem() : null;
+  if (shown) {
+    const nb = document.createElement("button");
+    nb.textContent = "🔄 다른 추천 꿀템 보기";
+    nb.onclick = () => browseBuiltin(1);
+    tp.append(document.createElement("br"), nb);
+    const sb = shown.builtin && HONEY_BUILTIN.find((x) => x[1] === shown.builtin);
+    if (sb) {
+      const ob = document.createElement("button");
+      ob.textContent = "🏆 이 꿀템 다른 상품 찾기";
+      ob.onclick = () => { browseBuiltin(0, sb); showTop3(sb); };
+      tp.append(ob);
+    }
+  } else if (state.threadsType === "honey" && state.honeyFresh && state.items.some((i) => i.honey)) {
+    const back = document.createElement("button");
+    back.textContent = "↩️ 담아 둔 꿀템으로 돌아가기";
+    back.onclick = () => { state.honeyFresh = false; topPicks = null; save(); draw(); };
+    tp.append(document.createElement("br"), back);
   }
   // 추천 꿀템 글이면: 쿠팡에서 같은 종류 상품 사진·내 링크 가져오기
   const bi = currentBuiltin();
@@ -1135,7 +1156,7 @@ function chooseTop(b, p) {
   Object.assign(it, { name: p.name, price: p.price || 0, orig: p.orig || 0, productUrl: p.productUrl, imgUrl: p.imgUrl || "", platform: "coupang", qty: q.qty, unit: q.unit, needsCheck: false, needsLink: false });
   delete it.searchName; delete it.awaitLink; delete it.photo;
   topPicks = null;
-  state.threadsType = "honey"; state.threadsKey = null;
+  state.threadsType = "honey"; state.threadsKey = null; state.honeyFresh = false;
   save(); draw();
   // 내 제휴 링크 만들기 (PC: 간편 링크 화면에서 자동으로 [링크 생성]까지 눌러줘요 → [URL 복사]만 누르면 연결)
   makeLink(it);
@@ -1158,6 +1179,18 @@ function builtinItem() {
   const same = state.items.filter((i) => i.builtin === b[1]).reverse();
   return same.find((i) => i.photo || i.imgUrl) || same[0] || null;
 }
+// 꿀템 소개형에서 추천 꿀템 둘러보기: step=1이면 아직 안 담은 다음 꿀템, target이 있으면 그 꿀템
+function browseBuiltin(step, target) {
+  const n = HONEY_BUILTIN.length;
+  let i = target ? HONEY_BUILTIN.indexOf(target) : ((Math.abs(state.threadsSeed) % n) + step) % n;
+  if (!target) {
+    for (let t = 0; t < n && state.items.some((x) => x.builtin === HONEY_BUILTIN[i][1]); t++) i = (i + 1) % n;
+  }
+  state.threadsType = "honey"; state.honeyFresh = true; state.threadsSeed = i;
+  state.threadsKey = null; state.threadsPhoto = ""; topPicks = null;
+  save(); draw();
+}
+
 // 지금 스레드 칸에 보이는 글이 미리 넣어둔 꿀템이면 [이름, 글]을 알려줘요
 function currentBuiltin() {
   const s = state.threadsSeed;
@@ -1180,7 +1213,7 @@ function findHoneyOnCoupang(b) {
     };
     state.items.push(it);
   }
-  state.threadsType = "honey"; state.threadsKey = null;
+  state.threadsType = "honey"; state.threadsKey = null; state.honeyFresh = false;
   save(); draw();
   makeLink(it);
 }
@@ -1839,7 +1872,7 @@ $("aiPrompt").onclick = async () => {
   }
 };
 $("honeyItem").addEventListener("change", () => { $("honeyHint").hidden = !$("honeyItem").checked; });
-$("threadsItem").onchange = (e) => { state.threadsKey = e.target.value || null; state.threadsPhoto = ""; save(); draw(); };
+$("threadsItem").onchange = (e) => { state.threadsKey = e.target.value || null; state.honeyFresh = false; state.threadsPhoto = ""; save(); draw(); };
 $("rerollThreads").onclick =() => { state.threadsSeed++; state.threadsPhoto = ""; save(); draw(); };
 document.querySelectorAll("#threadsTabs button").forEach((b) => (b.onclick = () => { state.threadsType = b.dataset.type; state.threadsPhoto = ""; save(); draw(); }));
 $("linkInBody").addEventListener("change", () => { state.settings.linkInBody = $("linkInBody").checked; save(); draw(); });
