@@ -233,6 +233,12 @@
         <input id="threadsToken" type="password" autocomplete="off" placeholder="THAA..." style="flex:1">
         <button id="threadsTokenClear" type="button">지우기</button>
       </div>
+      <label>📷 Cloudinary (내 사진·영상을 스레드에 같이 올릴 때, 선택)</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <input id="cloudName" autocomplete="off" placeholder="Cloud name (예: dxxxxxx)" style="flex:1;min-width:140px">
+        <input id="cloudPreset" autocomplete="off" placeholder="Upload preset 이름 (Unsigned)" style="flex:1;min-width:140px">
+      </div>
+      <p class="hint" id="cloudHint">스레드는 사진·영상을 인터넷 주소로만 받아서, 올리기 직전에 Cloudinary에 잠깐 올려요. 비밀키는 넣지 않아요. 이 기기에만 저장돼요.</p>
       <p class="hint" id="threadsTokenHint">메타 개발자 앱에서 받은 스레드 토큰을 넣으면, 벤치마킹 카드의 <b>[🚀 스레드에 바로 올리기]</b>가 켜져요. 토큰은 <b>이 기기에만</b> 저장돼요.</p>
       <p class="hint" id="claudeKeyHint">platform.claude.com → API Keys에서 만든 키를 넣으면, 벤치마킹 카드의 <b>[✨ Claude로 바로 변형]</b>이 켜져요. 키는 <b>이 기기에만</b> 저장되고 보관함 보내기·백업에는 안 들어가요. 쓴 만큼 요금이 나가니 키 화면에서 사용 한도를 걸어두세요.</p>
     </section>
@@ -1655,6 +1661,54 @@ async function thCheck(token) {
   thSetAuth({ ...thAuth(), id: me.id, username: me.username });
   return me;
 }
+// 사진·영상을 스레드가 가져갈 수 있는 인터넷 주소로: Cloudinary 서명 없는(Unsigned) 업로드. 비밀키는 안 써요
+const CLOUD_STORE = "rangi-cloudinary";
+function cloudCfg() { try { const c = JSON.parse(localStorage.getItem(CLOUD_STORE) || "null"); return c && c.cloud && c.preset ? c : null; } catch (e) { return null; } }
+// 큰 사진은 긴 쪽 1440px JPEG로 줄여서 올려요 (스레드 사진은 8MB까지)
+async function shrinkImage(f) {
+  if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(f.type) && f.size < 8e6) return f;
+  try {
+    const bmp = await createImageBitmap(f);
+    const s = Math.min(1, 1440 / Math.max(bmp.width, bmp.height));
+    if (s === 1 && f.type === "image/jpeg" && f.size < 8e6) return f;
+    const c = document.createElement("canvas");
+    c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s);
+    c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+    return await new Promise((r) => c.toBlob((bl) => r(bl || f), "image/jpeg", 0.9));
+  } catch (e) { return f; }
+}
+async function cloudUpload(f) {
+  const c = cloudCfg();
+  const fail = (m) => { const e = new Error(m); e.cloud = true; return e; };
+  if (!c) throw fail("⚙️ 내 방 설정에서 Cloudinary 칸을 먼저 채워주세요");
+  const isVideo = f.type.startsWith("video");
+  const fd = new FormData();
+  fd.append("file", isVideo ? f : await shrinkImage(f));
+  fd.append("upload_preset", c.preset);
+  let res, data;
+  try {
+    res = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(c.cloud)}/${isVideo ? "video" : "image"}/upload`, { method: "POST", body: fd });
+    data = await res.json().catch(() => ({}));
+  } catch (e) { throw fail("사진·영상을 올리지 못했어요. 인터넷 연결을 확인해 주세요"); }
+  if (!res.ok || !data.secure_url) {
+    const em = (data.error && data.error.message) || "HTTP " + res.status;
+    throw fail(/preset/i.test(em) ? "Cloudinary Upload preset 이름이 틀렸거나 Unsigned가 아니에요. ⚙️ 설정을 확인해 주세요 (" + em + ")"
+      : /cloud name|Invalid cloud/i.test(em) || res.status === 404 || res.status === 401 ? "Cloudinary Cloud name이 틀렸어요. ⚙️ 설정을 확인해 주세요"
+      : "사진·영상을 올리지 못했어요: " + em);
+  }
+  return { type: isVideo ? "video" : "image", url: data.secure_url };
+}
+// 스레드가 사진·영상을 다 받을 때까지 기다려요 (영상은 몇십 초 걸려요, 최대 3분)
+async function thWaitReady(id) {
+  const end = Date.now() + 180000;
+  while (Date.now() < end) {
+    const r = await thCall(`/v1.0/${id}`, { fields: "status,error_message" }, "GET");
+    if (!r.status || r.status === "FINISHED" || r.status === "PUBLISHED") return;
+    if (r.status === "ERROR" || r.status === "EXPIRED") throw new Error("스레드가 사진·영상을 못 받았어요" + (r.error_message ? " (" + r.error_message + ")" : ""));
+    await new Promise((s) => setTimeout(s, 3000));
+  }
+  throw new Error("사진·영상 처리가 너무 오래 걸려요. 잠시 뒤에 다시 해주세요");
+}
 const postBusy = new Set();
 // 올리기 전 마지막 확인창: 내 글을 여기서 바로 고칠 수 있고, 인용될 원래 글도 같이 보여줘요 → 고친 글(또는 취소면 null)
 function reviewBeforePost(b, text, username) {
@@ -1685,6 +1739,48 @@ function reviewBeforePost(b, text, username) {
     const qm = document.createElement("div"); qm.style.cssText = "margin-top:4px;color:#888";
     qm.textContent = (imgs || vids) ? `사진 ${imgs}장${vids ? ` · 영상 ${vids}개` : ""}도 인용으로 같이 보여요` : "";
     quote.append(qh, qt, qm);
+    // 📷 내가 찍은 사진·영상 넣기 (최대 10개) — 내 글에 같이 올라가요
+    const files = [];
+    const mine = document.createElement("div");
+    mine.style.cssText = "border:1px dashed #f2c300;border-radius:12px;padding:10px;font-size:13px";
+    const mh = document.createElement("div"); mh.style.cssText = "display:flex;align-items:center;gap:8px;flex-wrap:wrap";
+    const pick = document.createElement("button"); pick.type = "button"; pick.textContent = "📷 내 사진·영상 넣기 (최대 10개)";
+    pick.style.cssText = "flex:none;white-space:nowrap";
+    const fi = document.createElement("input"); fi.type = "file"; fi.multiple = true; fi.accept = "image/*,video/*"; fi.style.display = "none";
+    const mhint = document.createElement("span"); mhint.style.cssText = "color:#888;font-size:12px";
+    const thumbs = document.createElement("div"); thumbs.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;margin-top:8px";
+    const drawThumbs = () => {
+      thumbs.innerHTML = "";
+      files.forEach((f, i) => {
+        const w = document.createElement("div"); w.style.cssText = "position:relative;width:64px;height:64px;border-radius:8px;overflow:hidden;background:#eee";
+        const url = URL.createObjectURL(f);
+        const el = document.createElement(f.type.startsWith("video") ? "video" : "img");
+        el.src = url; el.muted = true; el.style.cssText = "width:100%;height:100%;object-fit:cover";
+        const x = document.createElement("div"); x.textContent = "✖";
+        x.style.cssText = "position:absolute;top:2px;right:2px;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;line-height:18px;text-align:center;cursor:pointer";
+        x.onclick = () => { files.splice(i, 1); drawThumbs(); };
+        if (f.type.startsWith("video")) { const v = document.createElement("div"); v.textContent = "🎬"; v.style.cssText = "position:absolute;left:3px;bottom:2px;font-size:12px"; w.append(el, v, x); }
+        else w.append(el, x);
+        thumbs.appendChild(w);
+      });
+      mhint.textContent = files.length ? `${files.length}개 넣었어요 (순서대로 올라가요)` : "안 넣으면 글만 올라가요";
+    };
+    pick.onclick = () => {
+      if (!cloudCfg()) return toast("⚙️ 내 방 설정에서 Cloudinary 칸을 먼저 채워주세요 (사진·영상을 스레드에 넘길 때 필요해요)", 6000);
+      fi.click();
+    };
+    fi.onchange = () => {
+      for (const f of fi.files) {
+        if (files.length >= 10) { toast("사진·영상은 10개까지 넣을 수 있어요"); break; }
+        if (!/^(image|video)\//.test(f.type)) continue;
+        if (f.type.startsWith("video") && f.size > 100 * 1024 * 1024) { toast("영상이 너무 커요 (100MB까지)"); continue; }
+        files.push(f);
+      }
+      fi.value = ""; drawThumbs();
+    };
+    mh.append(pick, mhint);
+    mine.append(mh, thumbs, fi);
+    drawThumbs();
     const btns = document.createElement("div"); btns.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
     const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "취소";
     cancel.style.cssText = "flex:none;white-space:nowrap";
@@ -1700,8 +1796,8 @@ function reviewBeforePost(b, text, username) {
     const close = (v) => { ov.remove(); resolve(v); };
     cancel.onclick = () => close(null);
     ov.onclick = (e) => { if (e.target === ov) close(null); };
-    ok.onclick = () => close(ta.value.trim());
-    box.append(title, label, ta, count, quote, btns);
+    ok.onclick = () => close({ text: ta.value.trim(), files: files.slice() });
+    box.append(title, label, ta, count, mine, quote, btns);
     ov.appendChild(box);
     document.body.appendChild(ov);
     ta.focus();
@@ -1712,8 +1808,9 @@ async function postQuoteNow(b, text) {
   if (!draft) return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요");
   const a = thAuth();
   if (!a) return toast("⚙️ 내 방 설정에 스레드 토큰을 먼저 넣어주세요");
-  const body = await reviewBeforePost(b, draft, a.username);
-  if (!body) return;
+  const picked = await reviewBeforePost(b, draft, a.username);
+  if (!picked) return;
+  const body = picked.text, files = picked.files || [];
   if (body !== draft) { // 확인창에서 고친 글은 카드에도 남겨요
     const cur = (state.bench || []).find((x) => x.url === b.url);
     if (cur) cur.mine = body;
@@ -1740,21 +1837,45 @@ async function postQuoteNow(b, text) {
         : "폰에서는 원래 글 번호를 못 읽어요. PC에서 이 카드의 [🔄 다시 읽기]를 누른 뒤 [📤 폰으로 보내기] 해주세요");
       e.quote = true; throw e;
     }
+    // 내 사진·영상: Cloudinary에 올려 인터넷 주소를 받고 → 스레드 사진/영상/여러 장 글로 만들어요
+    const media = [];
+    for (let i = 0; i < files.length; i++) {
+      toast(`📤 내 사진·영상 올리는 중… (${i + 1}/${files.length})`, 60000);
+      media.push(await cloudUpload(files[i]));
+    }
+    const asItem = (m, extra) => (m.type === "video"
+      ? { media_type: "VIDEO", video_url: m.url, ...extra }
+      : { media_type: "IMAGE", image_url: m.url, ...extra });
+    let params = { media_type: "TEXT" };
+    if (media.length === 1) params = asItem(media[0], {});
+    else if (media.length > 1) {
+      const children = [];
+      for (const m of media) {
+        const c = await thCall("/v1.0/me/threads", asItem(m, { is_carousel_item: "true" }));
+        children.push(c.id);
+      }
+      toast("⏳ 스레드가 사진·영상을 받는 중…", 60000);
+      for (const id of children) await thWaitReady(id);
+      params = { media_type: "CAROUSEL", children: children.join(",") };
+    }
     let container;
     try {
-      container = await thCall("/v1.0/me/threads", { media_type: "TEXT", text: body, quote_post_id: quoteId });
+      container = await thCall("/v1.0/me/threads", { ...params, text: body, quote_post_id: quoteId });
     } catch (e) {
       e.quote = true; throw e;
     }
+    if (media.length) { toast("⏳ 스레드가 사진·영상을 받는 중…", 60000); await thWaitReady(container.id); }
     const pub = await thCall("/v1.0/me/threads_publish", { creation_id: container.id });
     let link = "";
     try { link = (await thCall(`/v1.0/${pub.id}`, { fields: "permalink" }, "GET")).permalink || ""; } catch (e) {}
     const cur = (state.bench || []).find((x) => x.url === b.url);
     if (cur) { cur.posted = link || "yes"; cur.postedAt = Date.now(); }
     save();
-    msg = "🚀 스레드에 올렸어요! 원래 글의 사진·영상은 인용으로 같이 보여요";
+    msg = media.length ? `🚀 스레드에 올렸어요! 내 사진·영상 ${media.length}개와 원래 글 인용이 같이 올라갔어요`
+      : "🚀 스레드에 올렸어요! 원래 글의 사진·영상은 인용으로 같이 보여요";
   } catch (e) {
-    msg = e.code === 190 ? "스레드 토큰이 만료됐거나 틀렸어요. ⚙️ 내 방 설정에서 새 토큰을 넣어주세요"
+    msg = e.cloud ? e.message
+      : e.code === 190 ? "스레드 토큰이 만료됐거나 틀렸어요. ⚙️ 내 방 설정에서 새 토큰을 넣어주세요"
       : e.quote ? "인용 글을 만들지 못했어요 (" + e.message + "). [📋 복사하고 원래 글 열기]로 올려주세요"
       : "스레드에 올리지 못했어요: " + e.message;
   }
@@ -2503,6 +2624,13 @@ $("adTag").addEventListener("change", () => { state.settings.adTag = $("adTag").
     draw();
   };
   $("threadsTokenClear").onclick = () => { $("threadsToken").value = ""; $("threadsToken").onchange(); };
+  const cl = cloudCfg() || {};
+  $("cloudName").value = cl.cloud || ""; $("cloudPreset").value = cl.preset || "";
+  $("cloudName").onchange = $("cloudPreset").onchange = () => {
+    const cloud = $("cloudName").value.trim(), preset = $("cloudPreset").value.trim();
+    try { cloud && preset ? localStorage.setItem(CLOUD_STORE, JSON.stringify({ cloud, preset })) : localStorage.removeItem(CLOUD_STORE); } catch (e) {}
+    if (cloud && preset) toast("📷 Cloudinary를 넣었어요! 올리기 확인창에서 내 사진·영상을 넣을 수 있어요", 4000);
+  };
   $("adTag").checked = state.settings.adTag;
   $("linkInBody").checked = state.settings.linkInBody;
   if (IN_EXTENSION) {
