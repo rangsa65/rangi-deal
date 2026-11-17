@@ -1700,15 +1700,33 @@ async function cloudUpload(f) {
   return { type: isVideo ? "video" : "image", url: data.secure_url };
 }
 // 스레드가 사진·영상을 다 받을 때까지 기다려요 (영상은 몇십 초 걸려요, 최대 3분)
-async function thWaitReady(id) {
+// 처리 상태 확인이 브라우저에서 막히는 경우가 있어서, 막히면 잠깐 기다린 뒤 넘어가요 (게시는 thRetry가 될 때까지 다시 해봐요)
+async function thWaitReady(id, hasVideo) {
   const end = Date.now() + 180000;
   while (Date.now() < end) {
-    const r = await thCall(`/v1.0/${id}`, { fields: "status,error_message" }, "GET");
+    let r;
+    try { r = await thCall(`/v1.0/${id}`, { fields: "status,error_message" }, "GET"); }
+    catch (e) {
+      if (!e.net) throw e;
+      await new Promise((s) => setTimeout(s, hasVideo ? 30000 : 8000));
+      return;
+    }
     if (!r.status || r.status === "FINISHED" || r.status === "PUBLISHED") return;
     if (r.status === "ERROR" || r.status === "EXPIRED") throw new Error("스레드가 사진·영상을 못 받았어요" + (r.error_message ? " (" + r.error_message + ")" : ""));
     await new Promise((s) => setTimeout(s, 3000));
   }
   throw new Error("사진·영상 처리가 너무 오래 걸려요. 잠시 뒤에 다시 해주세요");
+}
+// 스레드가 아직 사진·영상을 받는 중이면 글 만들기·게시가 오류로 돌아와요 → 5초마다 최대 3분 동안 다시 해봐요
+async function thRetry(fn) {
+  const end = Date.now() + 180000;
+  for (;;) {
+    try { return await fn(); }
+    catch (e) {
+      if (e.code === 190 || e.net || Date.now() > end) throw e;
+      await new Promise((s) => setTimeout(s, 5000));
+    }
+  }
 }
 const postBusy = new Set();
 // 올리기 전 마지막 확인창: 내 글을 여기서 바로 고치고, 내 사진·영상을 넣어요 → {text, files} (취소면 null)
@@ -1828,12 +1846,17 @@ async function postQuoteNow(b, text) {
         children.push(c.id);
       }
       toast("⏳ 스레드가 사진·영상을 받는 중…", 60000);
-      for (const id of children) await thWaitReady(id);
+      for (let i = 0; i < children.length; i++) await thWaitReady(children[i], media[i].type === "video");
       params = { media_type: "CAROUSEL", children: children.join(",") };
     }
-    const container = await thCall("/v1.0/me/threads", { ...params, text: body });
-    if (media.length) { toast("⏳ 스레드가 사진·영상을 받는 중…", 60000); await thWaitReady(container.id); }
-    const pub = await thCall("/v1.0/me/threads_publish", { creation_id: container.id });
+    const hasVideo = media.some((m) => m.type === "video");
+    const container = media.length > 1
+      ? await thRetry(() => thCall("/v1.0/me/threads", { ...params, text: body }))
+      : await thCall("/v1.0/me/threads", { ...params, text: body });
+    if (media.length) { toast("⏳ 스레드가 사진·영상을 받는 중… (영상은 1분쯤 걸려요, 화면을 켜 두세요)", 90000); await thWaitReady(container.id, hasVideo); }
+    const pub = media.length
+      ? await thRetry(() => thCall("/v1.0/me/threads_publish", { creation_id: container.id }))
+      : await thCall("/v1.0/me/threads_publish", { creation_id: container.id });
     let link = "";
     try { link = (await thCall(`/v1.0/${pub.id}`, { fields: "permalink" }, "GET")).permalink || ""; } catch (e) {}
     const cur = (state.bench || []).find((x) => x.url === b.url);
