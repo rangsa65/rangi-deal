@@ -1728,6 +1728,14 @@ async function thRetry(fn) {
     }
   }
 }
+// 스레드 주제(topic_tag): 1~50자, 마침표(.)와 &는 못 써요. 마지막에 쓴 주제를 이 기기에 기억해요
+const TH_TOPIC_STORE = "rangi-threads-topic";
+function thTopic() { try { const v = localStorage.getItem(TH_TOPIC_STORE); return v === null ? "살림" : v; } catch (e) { return ""; } }
+function thSetTopic(v) {
+  const t = String(v || "").replace(/[.&#]/g, "").replace(/\s+/g, " ").trim().slice(0, 50);
+  try { localStorage.setItem(TH_TOPIC_STORE, t); } catch (e) {}
+  return t;
+}
 const postBusy = new Set();
 // 올리기 전 마지막 확인창: 내 글을 여기서 바로 고치고, 내 사진·영상을 넣어요 → {text, files} (취소면 null)
 function reviewBeforePost(b, text, username) {
@@ -1787,6 +1795,12 @@ function reviewBeforePost(b, text, username) {
       fi.value = ""; drawThumbs();
     };
     mh.append(pick, mhint);
+    // 🏷️ 주제: 스레드 글에 붙는 주제(예: 살림). 마지막에 쓴 주제를 기억해 둬요
+    const topicRow = document.createElement("div"); topicRow.style.cssText = "display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700";
+    const topic = document.createElement("input");
+    topic.value = thTopic(); topic.maxLength = 50; topic.placeholder = "예: 살림, 생활꿀팁 (비우면 주제 없이)";
+    topic.style.cssText = "flex:1;min-width:0";
+    topicRow.append(document.createTextNode("🏷️ 주제"), topic);
     mine.append(mh, thumbs, fi);
     drawThumbs();
     const btns = document.createElement("div"); btns.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
@@ -1804,8 +1818,8 @@ function reviewBeforePost(b, text, username) {
     const close = (v) => { ov.remove(); resolve(v); };
     cancel.onclick = () => close(null);
     ov.onclick = (e) => { if (e.target === ov) close(null); };
-    ok.onclick = () => close({ text: ta.value.trim(), files: files.slice() });
-    box.append(title, label, ta, count, mine, btns);
+    ok.onclick = () => close({ text: ta.value.trim(), files: files.slice(), topic: topic.value });
+    box.append(title, label, ta, count, topicRow, mine, btns);
     ov.appendChild(box);
     document.body.appendChild(ov);
     ta.focus();
@@ -1819,6 +1833,7 @@ async function postQuoteNow(b, text) {
   const picked = await reviewBeforePost(b, draft, a.username);
   if (!picked) return;
   const body = picked.text, files = picked.files || [];
+  const topicTag = thSetTopic(picked.topic);
   if (body !== draft) { // 확인창에서 고친 글은 카드에도 남겨요
     const cur = (state.bench || []).find((x) => x.url === b.url);
     if (cur) cur.mine = body;
@@ -1851,8 +1866,8 @@ async function postQuoteNow(b, text) {
     }
     const hasVideo = media.some((m) => m.type === "video");
     const container = media.length > 1
-      ? await thRetry(() => thCall("/v1.0/me/threads", { ...params, text: body }))
-      : await thCall("/v1.0/me/threads", { ...params, text: body });
+      ? await thRetry(() => thCall("/v1.0/me/threads", { ...params, text: body, ...(topicTag ? { topic_tag: topicTag } : {}) }))
+      : await thCall("/v1.0/me/threads", { ...params, text: body, ...(topicTag ? { topic_tag: topicTag } : {}) });
     if (media.length) { toast("⏳ 스레드가 사진·영상을 받는 중… (영상은 1분쯤 걸려요, 화면을 켜 두세요)", 90000); await thWaitReady(container.id, hasVideo); }
     const pub = media.length
       ? await thRetry(() => thCall("/v1.0/me/threads_publish", { creation_id: container.id }))
