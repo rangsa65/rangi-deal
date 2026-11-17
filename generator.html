@@ -1612,20 +1612,39 @@ function renderBench() {
       row.appendChild(note);
       card.appendChild(row);
     }
+    // ✍️ 내가 올릴 글: AI가 써준 글을 붙여넣거나 직접 써요 → 이 글로 원래 글을 인용해서 올려요
+    const mineLabel = document.createElement("div");
+    mineLabel.style.cssText = "font-size:13px;font-weight:700;margin-top:4px";
+    mineLabel.textContent = "✍️ 내가 올릴 글 (변형한 글)";
+    const mine = document.createElement("textarea");
+    mine.value = b.mine || "";
+    mine.rows = Math.min(10, Math.max(3, (b.mine || "").split("\n").length));
+    mine.placeholder = "① [🤖 AI로 내 글 쓰기] → 챗GPT가 써준 글 중 하나를 복사해서 여기에 붙여넣기 (직접 써도 돼요)\n② [🔁 내 글로 인용해서 올리기]";
+    mine.style.borderColor = "#f2c300";
+    mine.addEventListener("paste", (e) => e.stopPropagation());
+    mine.oninput = () => { b.mine = mine.value; };
+    mine.onchange = () => { b.mine = mine.value; save(); };
+    card.append(mineLabel, mine);
     const btns = document.createElement("div"); btns.className = "btns"; btns.style.marginTop = "0";
-    const mk = (label, fn, primary) => { const x = document.createElement("button"); x.type = "button"; x.textContent = label; if (primary) x.className = "primary"; x.onclick = fn; btns.appendChild(x); return x; };
-    mk("🔁 이 글 인용하기", () => {
-      setQuote(b.url);
-      $("quoteUrl").scrollIntoView({ behavior: "smooth", block: "center" });
-      toast("🔁 인용할 원래 글로 넣었어요! 글 종류를 고르고 [🔁 원래 글 인용해서 올리기]를 눌러주세요", 5000);
-    }, true);
+    const mk =(label, fn, primary) => { const x = document.createElement("button"); x.type = "button"; x.textContent = label; if (primary) x.className = "primary"; x.onclick = fn; btns.appendChild(x); return x; };
     mk("🤖 AI로 내 글 쓰기", async () => {
-      if (!(b.text || "").trim()) return toast("본문이 비어 있어요. 본문을 먼저 붙여넣어 주세요");
+      if (!(b.text || "").trim()) return toast("원래 글 본문이 비어 있어요. 본문을 먼저 붙여넣어 주세요");
       const p = benchPrompt(b);
-      if (CAN_SHARE) return shareText(p);
+      if (CAN_SHARE) {
+        await shareText(p);
+        return toast("챗GPT가 써준 글 하나를 복사해서 이 카드의 [✍️ 내가 올릴 글] 칸에 붙여넣으세요", 6000);
+      }
       await copy(p);
-      toast("🤖 프롬프트를 복사했어요! 챗GPT 입력칸에 Ctrl+V → 보내기. 다 쓴 글은 위 스레드용 칸에서 올려주세요", 6000);
+      toast("🤖 프롬프트 복사! 챗GPT에 Ctrl+V → 보내기 → 마음에 드는 글을 복사해서 이 카드의 [✍️ 내가 올릴 글] 칸에 붙여넣으세요", 8000);
     });
+    mk("🔁 내 글로 인용해서 올리기", async () => {
+      const body = (mine.value || "").trim();
+      if (!body) { mine.focus(); return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요. AI가 써준 글이나 직접 쓴 글을 먼저 넣어주세요", 5000); }
+      b.mine = mine.value; save();
+      try { await navigator.clipboard.writeText(body); } catch (e) { await copy(body); }
+      window.open(b.url, "_blank");
+      toast("내 글 복사 완료! 열린 글에서 🔁 리포스트 → 인용 → 글쓰기 칸 꾹 눌러 붙여넣기 → 게시", 9000);
+    }, true);
     const sel = document.createElement("select"); sel.style.width = "auto";
     [["", "미분류"], ...folders.map((f) => [f, "📁 " + f])].forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); });
     sel.value = b.folder || "";
@@ -1680,7 +1699,7 @@ async function benchImport(text) {
     const cur = state.bench.find((x) => x.url === nb.url);
     if (!cur) { state.bench.push({ ...nb }); added++; return; }
     // 이미 있는 글: 비어 있는 칸만 채워요 (사진 미리보기·내가 고친 본문은 그대로)
-    for (const k of ["text", "likes", "replies", "reposts", "date", "folder"]) if (!cur[k] && nb[k]) cur[k] = nb[k];
+    for (const k of ["text", "mine", "likes", "replies", "reposts", "date", "folder"]) if (!cur[k] && nb[k]) cur[k] = nb[k];
   });
   state.bench.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
   state.benchFolders = [...new Set([...(state.benchFolders || []), ...(data.f || [])])];
