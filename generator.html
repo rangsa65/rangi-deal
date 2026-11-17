@@ -288,6 +288,26 @@
       <label class="check"><input type="checkbox" id="linkInBody"> 카톡방 링크를 본문에도 넣기</label>
       <p class="hint">본문에 외부 링크가 있으면 노출이 줄어든다는 얘기가 많아서, 기본값은 링크를 첫 댓글에 따로 다는 방식이에요. 스레드 글에 제휴 링크(쿠팡·토스 등)를 직접 걸 때는 광고 표시도 함께 넣어야 해요.</p>
     </section>
+
+    <section class="card" id="benchCard">
+      <h2>📚 벤치마킹 보관함 <span class="hint" id="benchCount"></span></h2>
+      <p class="hint" id="benchTip">반응 좋은 스레드 글을 모아두고, 그 글로 내 글을 쓰거나 인용해서 올려요.</p>
+      <div style="display:flex;gap:8px">
+        <input id="benchUrl" placeholder="스레드 글 링크 붙여넣기 ([공유 → 링크 복사])" style="flex:1">
+        <button class="primary" id="benchAdd" type="button">📥 담기</button>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <select id="benchFolder" style="flex:1;min-width:140px"></select>
+        <select id="benchSort" style="width:auto">
+          <option value="new">최근 담은 순</option>
+          <option value="likes">좋아요 많은 순</option>
+        </select>
+        <button id="benchNewFolder" type="button">📁 폴더 만들기</button>
+        <button id="benchDelFolder" type="button" hidden>폴더 지우기</button>
+      </div>
+      <input id="benchSearch" placeholder="🔍 작성자(@) 또는 내용 검색" style="margin-top:8px">
+      <div id="benchList" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>
+    </section>
   </div>
 </main>
 
@@ -580,7 +600,7 @@ const TH_TIPS = {
   question: "댓글이 많이 달리면 노출이 늘어요. 댓글 단 분들께 방을 안내하기 좋아요.",
 };
 
-let state = { items: [], style: "basic", threadsSeed: 0, threadsType: "proof", settings: { roomName: "", roomLink: "", adTag: true, linkInBody: false } };
+let state = { items: [], bench: [], benchFolders: [], style: "basic", threadsSeed: 0, threadsType: "proof", settings: { roomName: "", roomLink: "", adTag: true, linkInBody: false } };
 
 // 확장 프로그램 안에서는 chrome.storage(토스·쿠팡 페이지와 공유), 파일로 열면 localStorage
 const IN_EXTENSION = typeof chrome !== "undefined" && !!(chrome.storage && chrome.storage.local);
@@ -1045,6 +1065,7 @@ function draw() {
   }
   $("threadsOut").textContent = renderThreads();
   $("threadsComment").textContent = renderThreadsComment() || "(정보형·꿀템 소개형은 첫 댓글에 카톡방 링크를 달지 않아요. 홍보 없는 글이어야 노출이 잘 돼요)";
+  renderBench();
   setTimeout(warmShareFiles, 300);
 }
 
@@ -1420,10 +1441,8 @@ function importText(text, fallbackName) {
   const all = [fallbackName, text].filter(Boolean).join("\n");
   const tq = all.match(THREADS_POST_RE);
   if (tq) {
-    setQuote(tq[0]);
-    $("quoteUrl").scrollIntoView({ behavior: "smooth", block: "center" });
     $("importText").value = "";
-    toast("🔁 인용할 원래 글로 넣었어요! 글 종류를 고르고 [🔁 원래 글 인용해서 올리기]를 눌러주세요", 5000);
+    addBench(tq[0]);
     return;
   }
   if (FALLCENT_RE.test(all)) return importFallcent(all);
@@ -1446,6 +1465,193 @@ function importText(text, fallbackName) {
   next.focus();
   toast(p.price ? "채웠어요! 확인하고 [보관함에 담기]를 눌러주세요" : "채웠어요! 판매가를 넣고 [보관함에 담기]를 눌러주세요");
 }
+
+// ---------- 📚 벤치마킹 보관함 ----------
+// 반응 좋은 스레드 글을 모아둬요 (state.bench). 사진·영상은 참고용 미리보기만 보여주고, 내 글에는 붙이지 않아요 (원래 글은 인용으로)
+const benchBusy = new Set();
+function benchCall(url) {
+  if (IN_EXTENSION) return new Promise((res) => chrome.runtime.sendMessage({ type: "bench", url }, (r) => { void chrome.runtime.lastError; res(r || null); }));
+  if (BRIDGE) return extCall({ type: "bench", url });
+  return Promise.resolve(null);
+}
+function benchNorm(url) {
+  const m = String(url || "").match(THREADS_POST_RE);
+  return m ? m[0].replace(/^http:/, "https:").replace("threads.net", "threads.com").replace("://threads.", "://www.threads.") : "";
+}
+async function addBench(raw) {
+  const url = benchNorm(raw);
+  if (!url) return toast("스레드 글 링크가 아니에요. 글에서 [공유 → 링크 복사]로 가져와 주세요");
+  if (!Array.isArray(state.bench)) state.bench = [];
+  const view = state.benchView || "all";
+  const folder = view !== "all" && view !== "none" ? view : "";
+  let b = state.bench.find((x) => x.url === url);
+  const isNew = !b;
+  if (!b) {
+    b = { url, author: (url.match(/@([\w.]+)/) || [])[1] || "", text: "", likes: 0, replies: 0, reposts: 0, date: "", media: [], folder, addedAt: Date.now() };
+    state.bench.unshift(b);
+  }
+  save(); draw();
+  $("benchCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  if (!isNew && b.text) return toast("이미 담긴 글이에요. 새로 읽으려면 카드의 [🔄 다시 읽기]를 눌러주세요");
+  await benchRead(b, true);
+}
+async function benchRead(b, isNew) {
+  if (!IN_EXTENSION && !BRIDGE) {
+    if (isNew) toast("📥 담았어요! 휴대폰에서는 글 내용을 못 읽어와서, 카드에 본문을 붙여넣어 주세요 (PC 크롬에서 담으면 자동으로 채워져요)", 7000);
+    return;
+  }
+  benchBusy.add(b.url); draw();
+  if (isNew) toast("스레드 글을 읽는 중이에요… (몇 초 걸려요)", 4000);
+  const r = await benchCall(b.url);
+  benchBusy.delete(b.url);
+  const cur = (state.bench || []).find((x) => x.url === b.url);
+  if (r && r.item && cur) {
+    Object.assign(cur, { ...r.item, url: cur.url, folder: cur.folder, addedAt: cur.addedAt });
+    save(); toast("📥 벤치마킹 보관함에 담았어요!");
+  } else if (!r) {
+    toast("확장 프로그램을 새로고침(업데이트)해야 글을 읽어올 수 있어요. 본문은 카드에 직접 붙여넣어도 돼요", 6000);
+  } else {
+    toast("글을 읽지 못했어요. 카드에 본문을 직접 붙여넣어 주세요", 5000);
+  }
+  draw();
+}
+function benchCountText(n) {
+  n = n || 0;
+  return n >= 10000 ? (n / 10000).toFixed(1).replace(/\.0$/, "") + "만" : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "천" : String(n);
+}
+function benchPrompt(b) {
+  return [
+    "너는 스레드(Threads)에 생활 꿀템·특가 글을 쓰는 카피라이터야.",
+    "아래 [참고 글]은 반응이 좋았던 다른 사람의 글이야. 이 글의 '구조'(첫 줄 후킹, 줄바꿈 리듬, 말투, 댓글을 부르는 마무리)만 참고해서, 내 계정에 올릴 새 글을 써줘.",
+    "",
+    "[꼭 지킬 것]",
+    "- 참고 글 문장을 그대로 쓰거나 단어만 바꾸지 마. 완전히 새 문장으로 써.",
+    "- 참고 글 작성자의 개인 경험(먹어봤다, 써봤다, 가족·지인 이야기 등)을 내 경험처럼 쓰지 마.",
+    "- 효능·가격·후기를 지어내지 마. 모르는 정보는 [ ]로 비워둬.",
+    "- 상품이 나오면 마지막에 '쿠팡 검색어: ○○'로 따로 적어줘.",
+    "- 500자 안쪽, 3가지 버전으로.",
+    "",
+    `[참고 글] @${b.author} (좋아요 ${b.likes || 0} · 댓글 ${b.replies || 0} · 리포스트 ${b.reposts || 0})`,
+    b.text || "(본문 없음)",
+  ].join("\n");
+}
+function renderBench() {
+  const list = $("benchList");
+  if (!list) return;
+  const all = Array.isArray(state.bench) ? state.bench : [];
+  const folders = Array.isArray(state.benchFolders) ? state.benchFolders : [];
+  const view = state.benchView || "all";
+  const fs = $("benchFolder");
+  const opts = [["all", `전체 보기 (${all.length})`], ["none", `미분류 (${all.filter((b) => !b.folder).length})`],
+    ...folders.map((f) => [f, `📁 ${f} (${all.filter((b) => b.folder === f).length})`])];
+  fs.replaceChildren(...opts.map(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; return o; }));
+  fs.value = opts.some((o) => o[0] === view) ? view : "all";
+  $("benchDelFolder").hidden = !folders.includes(fs.value);
+  $("benchSort").value = state.benchSort || "new";
+  $("benchCount").textContent = all.length ? `${all.length}개` : "";
+  $("benchTip").innerHTML = IN_EXTENSION || BRIDGE
+    ? "반응 좋은 스레드 글을 모아둬요. 링크를 붙여넣거나, PC 크롬에서 스레드 글을 열고 오른쪽 아래 <b>[📥 벤치마킹 담기]</b>를 눌러도 돼요."
+    : "반응 좋은 스레드 글을 모아둬요. 스레드 글에서 <b>[공유 → 링크 복사]</b> 후 붙여넣거나 <b>[공유 → 랑이 특가 자동화]</b>로 보내면 담겨요.";
+  const q = ($("benchSearch").value || "").trim().toLowerCase().replace(/^@/, "");
+  let shown = all.filter((b) => fs.value === "all" || (fs.value === "none" ? !b.folder : b.folder === fs.value))
+    .filter((b) => !q || (b.author || "").toLowerCase().includes(q) || (b.text || "").toLowerCase().includes(q));
+  if ((state.benchSort || "new") === "likes") shown = [...shown].sort((a, b) => (b.likes || 0) - (a.likes || 0));
+  const ae = document.activeElement;
+  if (ae && ae.tagName === "TEXTAREA" && list.contains(ae)) return; // 본문을 고치는 중에는 다시 그리지 않아요
+  list.replaceChildren();
+  if (!shown.length) {
+    const e = document.createElement("div"); e.className = "empty";
+    e.textContent = all.length ? "찾는 글이 없어요" : "아직 담은 글이 없어요";
+    list.appendChild(e); return;
+  }
+  shown.forEach((b) => {
+    const card = document.createElement("div");
+    card.style.cssText = "border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;display:flex;flex-direction:column;gap:8px";
+    const head = document.createElement("div");
+    head.style.cssText = "display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px";
+    const who = document.createElement("a");
+    who.href = b.url; who.target = "_blank"; who.rel = "noopener"; who.style.fontWeight = "700";
+    who.textContent = "@" + (b.author || "?");
+    const meta = document.createElement("span"); meta.style.color = "#888";
+    meta.textContent = (benchBusy.has(b.url) ? "⏳ 읽는 중… " : "")
+      + `❤️ ${benchCountText(b.likes)} 💬 ${benchCountText(b.replies)} 🔁 ${benchCountText(b.reposts)}`
+      + (b.date ? " · " + new Date(b.date).toLocaleDateString("ko-KR") : "");
+    head.append(who, meta);
+    card.appendChild(head);
+    const txt = document.createElement("textarea");
+    txt.value = b.text || "";
+    txt.rows = Math.min(8, Math.max(3, (b.text || "").split("\n").length));
+    txt.placeholder = "본문을 여기에 붙여넣어 주세요 (스레드 글을 꾹 눌러 복사)";
+    txt.addEventListener("paste", (e) => e.stopPropagation());
+    txt.onchange = () => { b.text = txt.value; save(); };
+    card.appendChild(txt);
+    const media = (b.media || []).filter((m) => m.src);
+    const vids = (b.media || []).filter((m) => m.type === "video").length;
+    if (media.length || vids) {
+      const row = document.createElement("div");
+      row.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:center";
+      media.forEach((m) => {
+        const img = document.createElement("img");
+        img.className = "thumb"; img.alt = ""; img.referrerPolicy = "no-referrer"; img.src = m.src;
+        img.style.cssText = "width:64px;height:64px;cursor:pointer";
+        img.title = "참고용 미리보기 (누르면 원래 글)";
+        img.onclick = () => window.open(b.url, "_blank");
+        img.onerror = () => img.remove(); // 스레드 사진 주소는 며칠 지나면 만료돼요
+        row.appendChild(img);
+      });
+      const note = document.createElement("span"); note.className = "hint"; note.style.margin = "0";
+      note.textContent = (vids ? `▶ 영상 ${vids}개 · ` : "") + "참고용 미리보기";
+      row.appendChild(note);
+      card.appendChild(row);
+    }
+    const btns = document.createElement("div"); btns.className = "btns"; btns.style.marginTop = "0";
+    const mk = (label, fn, primary) => { const x = document.createElement("button"); x.type = "button"; x.textContent = label; if (primary) x.className = "primary"; x.onclick = fn; btns.appendChild(x); return x; };
+    mk("🔁 이 글 인용하기", () => {
+      setQuote(b.url);
+      $("quoteUrl").scrollIntoView({ behavior: "smooth", block: "center" });
+      toast("🔁 인용할 원래 글로 넣었어요! 글 종류를 고르고 [🔁 원래 글 인용해서 올리기]를 눌러주세요", 5000);
+    }, true);
+    mk("🤖 AI로 내 글 쓰기", async () => {
+      if (!(b.text || "").trim()) return toast("본문이 비어 있어요. 본문을 먼저 붙여넣어 주세요");
+      const p = benchPrompt(b);
+      if (CAN_SHARE) return shareText(p);
+      await copy(p);
+      toast("🤖 프롬프트를 복사했어요! 챗GPT 입력칸에 Ctrl+V → 보내기. 다 쓴 글은 위 스레드용 칸에서 올려주세요", 6000);
+    });
+    const sel = document.createElement("select"); sel.style.width = "auto";
+    [["", "미분류"], ...folders.map((f) => [f, "📁 " + f])].forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); });
+    sel.value = b.folder || "";
+    sel.onchange = () => { b.folder = sel.value; save(); sel.blur(); draw(); };
+    btns.appendChild(sel);
+    if (IN_EXTENSION || BRIDGE) mk("🔄 다시 읽기", () => benchRead(b, false));
+    mk("🗑️", () => { if (confirm("이 글을 벤치마킹 보관함에서 뺄까요?")) { state.bench = state.bench.filter((x) => x !== b); save(); draw(); } });
+    card.appendChild(btns);
+    list.appendChild(card);
+  });
+}
+$("benchAdd").onclick = () => {
+  const v = $("benchUrl").value.trim();
+  if (!v) return toast("스레드 글 링크를 붙여넣어 주세요");
+  $("benchUrl").value = "";
+  addBench(v);
+};
+$("benchUrl").addEventListener("keydown", (e) => { if (e.key === "Enter") $("benchAdd").click(); });
+$("benchFolder").onchange = (e) => { state.benchView = e.target.value; save(); draw(); };
+$("benchSort").onchange = (e) => { state.benchSort = e.target.value; save(); draw(); };
+$("benchSearch").oninput = () => renderBench();
+$("benchNewFolder").onclick = () => {
+  const n = (prompt("새 폴더 이름 (예: 생활꿀템, 음식, 후킹 잘된 글)") || "").trim().slice(0, 20);
+  if (!n) return;
+  state.benchFolders = [...new Set([...(state.benchFolders || []), n])];
+  state.benchView = n; save(); draw();
+};
+$("benchDelFolder").onclick = () => {
+  const f = $("benchFolder").value;
+  if (!confirm(`'${f}' 폴더를 지울까요? 안에 있던 글은 미분류로 옮겨져요.`)) return;
+  state.benchFolders = (state.benchFolders || []).filter((x) => x !== f);
+  (state.bench || []).forEach((b) => { if (b.folder === f) b.folder = ""; });
+  state.benchView = "all"; save(); draw();
+};
 
 // ---------- 휴대폰에서 카톡 등으로 바로 공유 ----------
 const CAN_SHARE = !!navigator.share && matchMedia("(pointer: coarse)").matches;
