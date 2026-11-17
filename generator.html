@@ -309,7 +309,7 @@
 
     <section class="card" id="benchCard">
       <h2>📚 벤치마킹 보관함 <span class="hint" id="benchCount"></span></h2>
-      <p class="hint" id="benchTip">반응 좋은 스레드 글을 모아두고, 그 글로 내 글을 쓰거나 인용해서 올려요.</p>
+      <p class="hint" id="benchTip">반응 좋은 스레드 글을 모아두고, 그 글을 참고해 내 글로 새로 써서 올려요.</p>
       <div style="display:flex;gap:8px">
         <input id="benchUrl" placeholder="스레드 글 링크 붙여넣기 ([공유 → 링크 복사])" style="flex:1">
         <button class="primary" id="benchAdd" type="button">📥 담기</button>
@@ -1488,7 +1488,7 @@ function importText(text, fallbackName) {
 }
 
 // ---------- 📚 벤치마킹 보관함 ----------
-// 반응 좋은 스레드 글을 모아둬요 (state.bench). 사진·영상은 참고용 미리보기만 보여주고, 내 글에는 붙이지 않아요 (원래 글은 인용으로)
+// 반응 좋은 스레드 글을 모아둬요 (state.bench). 사진·영상은 참고용 미리보기만 보여주고, 내 글에는 붙이지 않아요 (내 사진·영상은 올리기 확인창에서 넣어요)
 const benchBusy = new Set();
 function benchCall(url) {
   if (IN_EXTENSION) return new Promise((res) => chrome.runtime.sendMessage({ type: "bench", url }, (r) => { void chrome.runtime.lastError; res(r || null); }));
@@ -1549,7 +1549,7 @@ function stripAuthor(text, author) {
 function benchPrompt(b) {
   return [
     "너는 스레드(Threads)에 생활 꿀템·특가 글을 쓰는 카피라이터야.",
-    "아래 [참고 글]은 반응이 좋았던 다른 사람의 글이야. 이 글을 인용하면서 위에 얹을 내 글을 써줘. 참고 글은 인용으로 아래에 같이 보이니까, 내 글은 그걸 보고 싶게 만드는 짧은 한마디면 돼.",
+    "아래 [참고 글]은 반응이 좋았던 다른 사람의 글이야. 이 글의 주제와 반응이 좋았던 포인트만 참고해서, 내 계정에 혼자 올라가는 완전히 새로운 글을 써줘. 원래 글은 같이 보이지 않으니까, 내 글만 읽어도 무슨 이야기인지 알 수 있어야 해. 사진·영상은 내가 직접 찍은 걸 붙일 거야.",
     "",
     "[스타일]",
     "- 스레드 말투: 친구한테 툭 던지듯 짧은 반말·구어체. 줄바꿈으로 리듬감 있게.",
@@ -1627,7 +1627,7 @@ async function claudeRewrite(b) {
   toast(msg, 6000);
 }
 
-// 🚀 스레드 공식 API로 바로 올리기 (원래 글 인용). 토큰은 이 기기(localStorage)에만 둬요
+// 🚀 스레드 공식 API로 내 글(+내 사진·영상) 바로 올리기. 토큰은 이 기기(localStorage)에만 둬요
 const TH_API = "https://graph.threads.net";
 const TH_TOKEN_STORE = "rangi-threads-token";
 function thAuth() { try { return JSON.parse(localStorage.getItem(TH_TOKEN_STORE) || "null"); } catch (e) { return null; } }
@@ -1710,7 +1710,7 @@ async function thWaitReady(id) {
   throw new Error("사진·영상 처리가 너무 오래 걸려요. 잠시 뒤에 다시 해주세요");
 }
 const postBusy = new Set();
-// 올리기 전 마지막 확인창: 내 글을 여기서 바로 고칠 수 있고, 인용될 원래 글도 같이 보여줘요 → 고친 글(또는 취소면 null)
+// 올리기 전 마지막 확인창: 내 글을 여기서 바로 고치고, 내 사진·영상을 넣어요 → {text, files} (취소면 null)
 function reviewBeforePost(b, text, username) {
   return new Promise((resolve) => {
     const ov = document.createElement("div");
@@ -1728,17 +1728,6 @@ function reviewBeforePost(b, text, username) {
     ta.style.cssText = "width:100%;box-sizing:border-box;border:2px solid #f2c300;border-radius:10px;padding:10px;font-size:15px;line-height:1.5";
     const count = document.createElement("div");
     count.style.cssText = "font-size:12px;text-align:right;color:#888";
-    const quote = document.createElement("div");
-    quote.style.cssText = "border:1px solid #ddd;border-radius:12px;padding:10px;font-size:13px;color:#444;background:#fafafa";
-    const qh = document.createElement("div"); qh.style.cssText = "font-weight:700;margin-bottom:4px";
-    qh.textContent = "🔁 인용될 원래 글";
-    const qt = document.createElement("div"); qt.style.cssText = "white-space:pre-wrap;max-height:90px;overflow:hidden";
-    qt.textContent = (b.text || "").split("\n").slice(0, 4).join("\n") || "(본문 없음)";
-    const vids = (b.media || []).filter((m) => m.type === "video").length;
-    const imgs = (b.media || []).filter((m) => m.type === "image").length;
-    const qm = document.createElement("div"); qm.style.cssText = "margin-top:4px;color:#888";
-    qm.textContent = (imgs || vids) ? `사진 ${imgs}장${vids ? ` · 영상 ${vids}개` : ""}도 인용으로 같이 보여요` : "";
-    quote.append(qh, qt, qm);
     // 📷 내가 찍은 사진·영상 넣기 (최대 10개) — 내 글에 같이 올라가요
     const files = [];
     const mine = document.createElement("div");
@@ -1797,7 +1786,7 @@ function reviewBeforePost(b, text, username) {
     cancel.onclick = () => close(null);
     ov.onclick = (e) => { if (e.target === ov) close(null); };
     ok.onclick = () => close({ text: ta.value.trim(), files: files.slice() });
-    box.append(title, label, ta, count, mine, quote, btns);
+    box.append(title, label, ta, count, mine, btns);
     ov.appendChild(box);
     document.body.appendChild(ov);
     ta.focus();
@@ -1820,23 +1809,6 @@ async function postQuoteNow(b, text) {
   let msg = "";
   try {
     await thCheck();
-    // 인용에는 스레드 API용 글 번호(graphId)가 필요해요 → 없으면 확장 프로그램으로 원래 글을 다시 읽어 와요
-    let quoteId = b.graphId || "";
-    if (!quoteId && (IN_EXTENSION || BRIDGE)) {
-      const r = await benchCall(b.url);
-      if (r && r.item && r.item.graphId) {
-        quoteId = r.item.graphId;
-        const cur = (state.bench || []).find((x) => x.url === b.url);
-        if (cur) cur.graphId = quoteId;
-        save();
-      }
-    }
-    if (!quoteId) {
-      const e = new Error(IN_EXTENSION || BRIDGE
-        ? "원래 글 번호를 못 읽었어요. 확장 프로그램을 새로고침한 뒤 다시 눌러주세요"
-        : "폰에서는 원래 글 번호를 못 읽어요. PC에서 이 카드의 [🔄 다시 읽기]를 누른 뒤 [📤 폰으로 보내기] 해주세요");
-      e.quote = true; throw e;
-    }
     // 내 사진·영상: Cloudinary에 올려 인터넷 주소를 받고 → 스레드 사진/영상/여러 장 글로 만들어요
     const media = [];
     for (let i = 0; i < files.length; i++) {
@@ -1858,12 +1830,7 @@ async function postQuoteNow(b, text) {
       for (const id of children) await thWaitReady(id);
       params = { media_type: "CAROUSEL", children: children.join(",") };
     }
-    let container;
-    try {
-      container = await thCall("/v1.0/me/threads", { ...params, text: body, quote_post_id: quoteId });
-    } catch (e) {
-      e.quote = true; throw e;
-    }
+    const container = await thCall("/v1.0/me/threads", { ...params, text: body });
     if (media.length) { toast("⏳ 스레드가 사진·영상을 받는 중…", 60000); await thWaitReady(container.id); }
     const pub = await thCall("/v1.0/me/threads_publish", { creation_id: container.id });
     let link = "";
@@ -1871,12 +1838,10 @@ async function postQuoteNow(b, text) {
     const cur = (state.bench || []).find((x) => x.url === b.url);
     if (cur) { cur.posted = link || "yes"; cur.postedAt = Date.now(); }
     save();
-    msg = media.length ? `🚀 스레드에 올렸어요! 내 사진·영상 ${media.length}개와 원래 글 인용이 같이 올라갔어요`
-      : "🚀 스레드에 올렸어요! 원래 글의 사진·영상은 인용으로 같이 보여요";
+    msg = "🚀 스레드에 올렸어요!" + (media.length ? ` 내 사진·영상 ${media.length}개도 같이 올라갔어요` : "");
   } catch (e) {
     msg = e.cloud ? e.message
       : e.code === 190 ? "스레드 토큰이 만료됐거나 틀렸어요. ⚙️ 내 방 설정에서 새 토큰을 넣어주세요"
-      : e.quote ? "인용 글을 만들지 못했어요 (" + e.message + "). [📋 복사하고 원래 글 열기]로 올려주세요"
       : "스레드에 올리지 못했어요: " + e.message;
   }
   postBusy.delete(b.url);
@@ -1958,14 +1923,14 @@ function renderBench() {
       row.appendChild(note);
       card.appendChild(row);
     }
-    // ✍️ 내가 올릴 글: AI가 써준 글을 붙여넣거나 직접 써요 → 이 글로 원래 글을 인용해서 올려요
+    // ✍️ 내가 올릴 글: AI가 써준 글을 붙여넣거나 직접 써요 → 내 글로 올려요 (원래 글은 인용하지 않아요)
     const mineLabel = document.createElement("div");
     mineLabel.style.cssText = "font-size:13px;font-weight:700;margin-top:4px";
     mineLabel.textContent = "✍️ 내가 올릴 글 (변형한 글)";
     const mine = document.createElement("textarea");
     mine.value = b.mine || "";
     mine.rows = Math.min(10, Math.max(3, (b.mine || "").split("\n").length));
-    mine.placeholder = "① [🤖 AI로 내 글 쓰기] → 챗GPT가 써준 글 중 하나를 복사해서 여기에 붙여넣기 (직접 써도 돼요)\n② [🔁 내 글로 인용해서 올리기]";
+    mine.placeholder = "① [🤖 AI로 내 글 쓰기] → 챗GPT가 써준 글 중 하나를 복사해서 여기에 붙여넣기 (직접 써도 돼요)\n② [🚀 스레드에 바로 올리기] 또는 [📋 내 글 복사하고 스레드 열기]";
     mine.style.borderColor = "#f2c300";
     mine.addEventListener("paste", (e) => e.stopPropagation());
     mine.oninput = () => { b.mine = mine.value; };
@@ -1980,7 +1945,7 @@ function renderBench() {
       pre.textContent = d;
       const use = document.createElement("button");
       use.type = "button"; use.textContent = `${i + 1}번 이걸로`; use.style.flex = "none";
-      use.onclick = () => { b.mine = d; save(); draw(); toast("✍️ 내가 올릴 글에 넣었어요. 고칠 곳은 고치고 [🔁 내 글로 인용해서 올리기]를 누르세요", 5000); };
+      use.onclick = () => { b.mine = d; save(); draw(); toast("✍️ 내가 올릴 글에 넣었어요. 고칠 곳은 고치고 [🚀 스레드에 바로 올리기]를 누르세요", 5000); };
       box.append(pre, use);
       card.appendChild(box);
     });
@@ -2003,7 +1968,7 @@ function renderBench() {
     });
     if (thAuth()) {
       const busy = postBusy.has(b.url);
-      const pb = mk(busy ? "⏳ 올리는 중…" : "🚀 스레드에 바로 올리기 (인용)", () => postQuoteNow(b, mine.value), true);
+      const pb = mk(busy ? "⏳ 올리는 중…" : "🚀 스레드에 바로 올리기", () => postQuoteNow(b, mine.value), true);
       pb.disabled = busy;
     }
     if (b.posted) {
@@ -2013,14 +1978,14 @@ function renderBench() {
       done.style.cssText = "align-self:center;font-size:13px;font-weight:700";
       btns.appendChild(done);
     }
-    mk(thAuth() ? "📋 복사하고 원래 글 열기" : "🔁 내 글로 인용해서 올리기", async () => {
+    mk("📋 내 글 복사하고 스레드 열기", async () => {
       const body = (mine.value || "").trim();
       if (!body) { mine.focus(); return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요. AI가 써준 글이나 직접 쓴 글을 먼저 넣어주세요", 5000); }
       b.mine = mine.value; save();
       try { await navigator.clipboard.writeText(body); } catch (e) { await copy(body); }
-      window.open(b.url, "_blank");
-      toast("내 글 복사 완료! 열린 글에서 🔁 리포스트 → 인용 → 글쓰기 칸 꾹 눌러 붙여넣기 → 게시", 9000);
-    }, true);
+      window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body), "_blank");
+      toast("내 글 복사 완료! 열린 스레드 글쓰기에 글이 들어가 있어요 (비어 있으면 꾹 눌러 붙여넣기). 내 사진·영상을 붙이고 게시하세요", 9000);
+    }, !thAuth());
     const sel = document.createElement("select"); sel.style.width = "auto";
     [["", "미분류"], ...folders.map((f) => [f, "📁 " + f])].forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; sel.appendChild(o); });
     sel.value = b.folder || "";
