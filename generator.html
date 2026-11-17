@@ -1534,6 +1534,12 @@ function benchCountText(n) {
   n = n || 0;
   return n >= 10000 ? (n / 10000).toFixed(1).replace(/\.0$/, "") + "만" : n >= 1000 ? (n / 1000).toFixed(1).replace(/\.0$/, "") + "천" : String(n);
 }
+// 글에서 원래 작성자 아이디(@아이디, 아이디)를 빼요
+function stripAuthor(text, author) {
+  let t = String(text || "");
+  if (author) t = t.split("@" + author).join("").split(author).join("");
+  return t.replace(/[ \t]{2,}/g, " ").replace(/^[ \t]+|[ \t]+$/gm, "").trim();
+}
 function benchPrompt(b) {
   return [
     "너는 스레드(Threads)에 생활 꿀템·특가 글을 쓰는 카피라이터야.",
@@ -1552,8 +1558,10 @@ function benchPrompt(b) {
     "- 효능·가격·후기를 지어내지 마.",
     "- 3가지 버전을 서로 다른 후킹 방식으로 써줘.",
     "",
-    `[참고 글] @${b.author} (좋아요 ${b.likes || 0} · 댓글 ${b.replies || 0} · 리포스트 ${b.reposts || 0})`,
-    b.text || "(본문 없음)",
+    "- 원래 글 작성자의 아이디(@…)나 이름, 닉네임은 절대 쓰지 마.",
+    "",
+    `[참고 글] (좋아요 ${b.likes || 0} · 댓글 ${b.replies || 0} · 리포스트 ${b.reposts || 0})`,
+    stripAuthor(b.text || "(본문 없음)", b.author),
   ].join("\n");
 }
 // ✨ Claude로 바로 변형: 키는 이 기기(localStorage)에만 두고, 보관함(state)에는 넣지 않아요
@@ -1596,7 +1604,7 @@ async function claudeRewrite(b) {
       msg = "Claude가 이 글로는 쓰기 어렵다고 했어요. 다른 글로 해보거나 [🤖 프롬프트 복사]로 써주세요";
     } else {
       const text = (data.content || []).filter((c) => c.type === "text").map((c) => c.text).join("");
-      const drafts = text.split(/^\s*={3,}\s*$/m).map((t) => t.trim()).filter(Boolean).slice(0, 3);
+      const drafts = text.split(/^\s*={3,}\s*$/m).map((t) => stripAuthor(t, b.author)).filter(Boolean).slice(0, 3);
       if (!drafts.length) msg = "글을 받지 못했어요. 다시 눌러주세요";
       else {
         const cur = (state.bench || []).find((x) => x.url === b.url);
@@ -1700,7 +1708,7 @@ function reviewBeforePost(b, text, username) {
   });
 }
 async function postQuoteNow(b, text) {
-  const draft = (text || "").trim();
+  const draft = stripAuthor(text, b.author); // 원래 작성자 아이디는 내 글에 안 넣어요
   if (!draft) return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요");
   const a = thAuth();
   if (!a) return toast("⚙️ 내 방 설정에 스레드 토큰을 먼저 넣어주세요");
