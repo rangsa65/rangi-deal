@@ -1521,7 +1521,7 @@ async function benchRead(b, isNew) {
   benchBusy.delete(b.url);
   const cur = (state.bench || []).find((x) => x.url === b.url);
   if (r && r.item && cur) {
-    Object.assign(cur, { ...r.item, url: cur.url, folder: cur.folder, addedAt: cur.addedAt });
+    Object.assign(cur, { ...r.item, url: cur.url, folder: cur.folder, addedAt: cur.addedAt, graphId: r.item.graphId || cur.graphId || "" });
     save(); toast("📥 벤치마킹 보관함에 담았어요!");
   } else if (!r) {
     toast("확장 프로그램을 새로고침(업데이트)해야 글을 읽어올 수 있어요. 본문은 카드에 직접 붙여넣어도 돼요", 6000);
@@ -1647,15 +1647,6 @@ async function thCheck(token) {
   thSetAuth({ ...thAuth(), id: me.id, username: me.username });
   return me;
 }
-// 스레드 글 주소의 글 코드(/post/DfXrt...) → 글 번호
-function threadsCodeToId(url) {
-  const m = String(url || "").match(/\/post\/([\w-]+)/);
-  if (!m) return "";
-  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-  let n = 0n;
-  for (const c of m[1].slice(0, 11)) { const i = A.indexOf(c); if (i < 0) return ""; n = n * 64n + BigInt(i); }
-  return n.toString();
-}
 const postBusy = new Set();
 async function postQuoteNow(b, text) {
   const body = (text || "").trim();
@@ -1668,7 +1659,23 @@ async function postQuoteNow(b, text) {
   let msg = "";
   try {
     await thCheck();
-    const quoteId = threadsCodeToId(b.url);
+    // 인용에는 스레드 API용 글 번호(graphId)가 필요해요 → 없으면 확장 프로그램으로 원래 글을 다시 읽어 와요
+    let quoteId = b.graphId || "";
+    if (!quoteId && (IN_EXTENSION || BRIDGE)) {
+      const r = await benchCall(b.url);
+      if (r && r.item && r.item.graphId) {
+        quoteId = r.item.graphId;
+        const cur = (state.bench || []).find((x) => x.url === b.url);
+        if (cur) cur.graphId = quoteId;
+        save();
+      }
+    }
+    if (!quoteId) {
+      const e = new Error(IN_EXTENSION || BRIDGE
+        ? "원래 글 번호를 못 읽었어요. 확장 프로그램을 새로고침한 뒤 다시 눌러주세요"
+        : "폰에서는 원래 글 번호를 못 읽어요. PC에서 이 카드의 [🔄 다시 읽기]를 누른 뒤 [📤 폰으로 보내기] 해주세요");
+      e.quote = true; throw e;
+    }
     let container;
     try {
       container = await thCall("/v1.0/me/threads", { media_type: "TEXT", text: body, quote_post_id: quoteId });
@@ -1883,7 +1890,7 @@ async function benchImport(text) {
     const cur = state.bench.find((x) => x.url === nb.url);
     if (!cur) { state.bench.push({ ...nb }); added++; return; }
     // 이미 있는 글: 비어 있는 칸만 채워요 (사진 미리보기·내가 고친 본문은 그대로)
-    for (const k of ["text", "mine", "likes", "replies", "reposts", "date", "folder"]) if (!cur[k] && nb[k]) cur[k] = nb[k];
+    for (const k of ["text", "mine", "graphId", "likes", "replies", "reposts", "date", "folder"]) if (!cur[k] && nb[k]) cur[k] = nb[k];
   });
   state.bench.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
   state.benchFolders = [...new Set([...(state.benchFolders || []), ...(data.f || [])])];
