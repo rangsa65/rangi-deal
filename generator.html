@@ -228,6 +228,12 @@
         <input id="claudeKey" type="password" autocomplete="off" placeholder="sk-ant-..." style="flex:1">
         <button id="claudeKeyClear" type="button">지우기</button>
       </div>
+      <label>🧵 스레드 액세스 토큰 (벤치마킹 글 바로 올리기용, 선택)</label>
+      <div style="display:flex;gap:8px">
+        <input id="threadsToken" type="password" autocomplete="off" placeholder="THAA..." style="flex:1">
+        <button id="threadsTokenClear" type="button">지우기</button>
+      </div>
+      <p class="hint" id="threadsTokenHint">메타 개발자 앱에서 받은 스레드 토큰을 넣으면, 벤치마킹 카드의 <b>[🚀 스레드에 바로 올리기]</b>가 켜져요. 토큰은 <b>이 기기에만</b> 저장돼요.</p>
       <p class="hint" id="claudeKeyHint">platform.claude.com → API Keys에서 만든 키를 넣으면, 벤치마킹 카드의 <b>[✨ Claude로 바로 변형]</b>이 켜져요. 키는 <b>이 기기에만</b> 저장되고 보관함 보내기·백업에는 안 들어가요. 쓴 만큼 요금이 나가니 키 화면에서 사용 한도를 걸어두세요.</p>
     </section>
   </div>
@@ -1607,6 +1613,85 @@ async function claudeRewrite(b) {
   toast(msg, 6000);
 }
 
+// 🚀 스레드 공식 API로 바로 올리기 (원래 글 인용). 토큰은 이 기기(localStorage)에만 둬요
+const TH_API = "https://graph.threads.net";
+const TH_TOKEN_STORE = "rangi-threads-token";
+function thAuth() { try { return JSON.parse(localStorage.getItem(TH_TOKEN_STORE) || "null"); } catch (e) { return null; } }
+function thSetAuth(a) { try { a ? localStorage.setItem(TH_TOKEN_STORE, JSON.stringify(a)) : localStorage.removeItem(TH_TOKEN_STORE); } catch (e) {} }
+async function thCall(path, params, method) {
+  const a = thAuth();
+  const body = new URLSearchParams({ ...params, access_token: a ? a.token : "" });
+  const res = method === "GET"
+    ? await fetch(`${TH_API}${path}?${body}`)
+    : await fetch(`${TH_API}${path}`, { method: "POST", body });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.error) {
+    const e = data.error || {};
+    const err = new Error(e.error_user_msg || e.message || "HTTP " + res.status);
+    err.code = e.code; throw err;
+  }
+  return data;
+}
+// 토큰 확인 (+ 30일 지나면 60일짜리로 자동 연장)
+async function thCheck(token) {
+  if (token) thSetAuth({ token, at: Date.now() });
+  const a = thAuth();
+  if (!a) throw new Error("토큰이 없어요");
+  if (!token && Date.now() - (a.at || 0) > 30 * 864e5) {
+    try {
+      const r = await thCall("/refresh_access_token", { grant_type: "th_refresh_token" }, "GET");
+      if (r.access_token) thSetAuth({ ...a, token: r.access_token, at: Date.now() });
+    } catch (e) {}
+  }
+  const me = await thCall("/v1.0/me", { fields: "id,username" }, "GET");
+  thSetAuth({ ...thAuth(), id: me.id, username: me.username });
+  return me;
+}
+// 스레드 글 주소의 글 코드(/post/DfXrt...) → 글 번호
+function threadsCodeToId(url) {
+  const m = String(url || "").match(/\/post\/([\w-]+)/);
+  if (!m) return "";
+  const A = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+  let n = 0n;
+  for (const c of m[1].slice(0, 11)) { const i = A.indexOf(c); if (i < 0) return ""; n = n * 64n + BigInt(i); }
+  return n.toString();
+}
+const postBusy = new Set();
+async function postQuoteNow(b, text) {
+  const body = (text || "").trim();
+  if (!body) return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요");
+  if (body.length > 500) return toast(`스레드 글은 500자까지예요 (지금 ${body.length}자). 조금 줄여주세요`, 5000);
+  const a = thAuth();
+  if (!a) return toast("⚙️ 내 방 설정에 스레드 토큰을 먼저 넣어주세요");
+  if (!confirm(`@${a.username || "내 계정"}에 이 글을 올릴까요? (원래 글 @${b.author} 인용)\n\n${body}`)) return;
+  postBusy.add(b.url); draw();
+  let msg = "";
+  try {
+    await thCheck();
+    const quoteId = threadsCodeToId(b.url);
+    let container;
+    try {
+      container = await thCall("/v1.0/me/threads", { media_type: "TEXT", text: body, quote_post_id: quoteId });
+    } catch (e) {
+      e.quote = true; throw e;
+    }
+    const pub = await thCall("/v1.0/me/threads_publish", { creation_id: container.id });
+    let link = "";
+    try { link = (await thCall(`/v1.0/${pub.id}`, { fields: "permalink" }, "GET")).permalink || ""; } catch (e) {}
+    const cur = (state.bench || []).find((x) => x.url === b.url);
+    if (cur) { cur.posted = link || "yes"; cur.postedAt = Date.now(); }
+    save();
+    msg = "🚀 스레드에 올렸어요! 원래 글의 사진·영상은 인용으로 같이 보여요";
+  } catch (e) {
+    msg = e.code === 190 ? "스레드 토큰이 만료됐거나 틀렸어요. ⚙️ 내 방 설정에서 새 토큰을 넣어주세요"
+      : e.quote ? "인용 글을 만들지 못했어요 (" + e.message + "). [📋 복사하고 원래 글 열기]로 올려주세요"
+      : "스레드에 올리지 못했어요: " + e.message;
+  }
+  postBusy.delete(b.url);
+  draw();
+  toast(msg, 8000);
+}
+
 function renderBench() {
   const list = $("benchList");
   if (!list) return;
@@ -1724,7 +1809,19 @@ function renderBench() {
       await copy(p);
       toast("🤖 프롬프트 복사! 챗GPT에 Ctrl+V → 보내기 → 마음에 드는 글을 복사해서 이 카드의 [✍️ 내가 올릴 글] 칸에 붙여넣으세요", 8000);
     });
-    mk("🔁 내 글로 인용해서 올리기", async () => {
+    if (thAuth()) {
+      const busy = postBusy.has(b.url);
+      const pb = mk(busy ? "⏳ 올리는 중…" : "🚀 스레드에 바로 올리기 (인용)", () => postQuoteNow(b, mine.value), true);
+      pb.disabled = busy;
+    }
+    if (b.posted) {
+      const done = document.createElement(b.posted.startsWith("http") ? "a" : "span");
+      done.textContent = "✅ 올림" + (b.postedAt ? " (" + new Date(b.postedAt).toLocaleDateString("ko-KR") + ")" : "");
+      if (done.tagName === "A") { done.href = b.posted; done.target = "_blank"; done.rel = "noopener"; }
+      done.style.cssText = "align-self:center;font-size:13px;font-weight:700";
+      btns.appendChild(done);
+    }
+    mk(thAuth() ? "📋 복사하고 원래 글 열기" : "🔁 내 글로 인용해서 올리기", async () => {
       const body = (mine.value || "").trim();
       if (!body) { mine.focus(); return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요. AI가 써준 글이나 직접 쓴 글을 먼저 넣어주세요", 5000); }
       b.mine = mine.value; save();
@@ -2312,6 +2409,29 @@ $("adTag").addEventListener("change", () => { state.settings.adTag = $("adTag").
     draw();
   };
   $("claudeKeyClear").onclick = () => { $("claudeKey").value = ""; $("claudeKey").onchange(); };
+  const thHintDefault = $("threadsTokenHint").innerHTML;
+  const thHint = () => {
+    const a = thAuth();
+    if (!a || !a.username) $("threadsTokenHint").innerHTML = thHintDefault;
+    else $("threadsTokenHint").innerHTML = `✅ <b>@${a.username}</b> 계정에 연결됐어요. 벤치마킹 카드의 <b>[🚀 스레드에 바로 올리기]</b>로 올릴 수 있어요. 토큰은 이 기기에만 저장돼요.`;
+  };
+  $("threadsToken").value = thAuth() ? thAuth().token : "";
+  thHint();
+  $("threadsToken").onchange = async () => {
+    const v = $("threadsToken").value.trim();
+    if (!v) { thSetAuth(null); thHint(); toast("스레드 토큰을 지웠어요"); draw(); return; }
+    toast("스레드 토큰을 확인하는 중…", 3000);
+    try {
+      const me = await thCheck(v);
+      thHint();
+      toast(`🧵 @${me.username} 계정에 연결됐어요!`, 4000);
+    } catch (e) {
+      thSetAuth(null); $("threadsToken").value = "";
+      toast("스레드 토큰이 맞지 않아요: " + e.message, 6000);
+    }
+    draw();
+  };
+  $("threadsTokenClear").onclick = () => { $("threadsToken").value = ""; $("threadsToken").onchange(); };
   $("adTag").checked = state.settings.adTag;
   $("linkInBody").checked = state.settings.linkInBody;
   if (IN_EXTENSION) {
