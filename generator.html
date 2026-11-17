@@ -1669,7 +1669,7 @@ function reviewBeforePost(b, text, username) {
     const quote = document.createElement("div");
     quote.style.cssText = "border:1px solid #ddd;border-radius:12px;padding:10px;font-size:13px;color:#444;background:#fafafa";
     const qh = document.createElement("div"); qh.style.cssText = "font-weight:700;margin-bottom:4px";
-    qh.textContent = `🔁 인용될 원래 글 · @${b.author}`;
+    qh.textContent = "🔁 인용될 원래 글";
     const qt = document.createElement("div"); qt.style.cssText = "white-space:pre-wrap;max-height:90px;overflow:hidden";
     qt.textContent = (b.text || "").split("\n").slice(0, 4).join("\n") || "(본문 없음)";
     const vids = (b.media || []).filter((m) => m.type === "video").length;
