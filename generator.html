@@ -304,7 +304,9 @@
         </select>
         <button id="benchNewFolder" type="button">📁 폴더 만들기</button>
         <button id="benchDelFolder" type="button" hidden>폴더 지우기</button>
+        <button id="benchExport" type="button">📤 폰으로 보내기</button>
       </div>
+      <p class="hint" id="benchSyncHint"></p>
       <input id="benchSearch" placeholder="🔍 작성자(@) 또는 내용 검색" style="margin-top:8px">
       <div id="benchList" style="display:flex;flex-direction:column;gap:10px;margin-top:10px"></div>
     </section>
@@ -1439,6 +1441,7 @@ function setQuote(url) {
 }
 function importText(text, fallbackName) {
   const all = [fallbackName, text].filter(Boolean).join("\n");
+  if (all.includes("RANGIBENCH1:")) { $("importText").value = ""; benchImport(all); return; } // 다른 기기에서 보낸 벤치마킹 보관함
   const tq = all.match(THREADS_POST_RE);
   if (tq) {
     $("importText").value = "";
@@ -1549,6 +1552,11 @@ function renderBench() {
   $("benchDelFolder").hidden = !folders.includes(fs.value);
   $("benchSort").value = state.benchSort || "new";
   $("benchCount").textContent = all.length ? `${all.length}개` : "";
+  const folderName = fs.value === "all" ? "" : fs.value === "none" ? "미분류 " : `'${fs.value}' 폴더 `;
+  $("benchExport").textContent = CAN_SHARE ? "📤 PC로 보내기" : "📤 폰으로 보내기";
+  $("benchSyncHint").textContent = CAN_SHARE
+    ? `PC↔폰 옮기기: [📤 PC로 보내기] → 카톡 '나와의 채팅'으로 보내고, PC에서 그 메시지를 복사해 아래 링크 칸에 붙여넣으세요. (지금 보이는 ${folderName || "전체 "}글을 보내요)`
+    : `PC↔폰 옮기기: [📤 폰으로 보내기] → 카톡 '나와의 채팅'에 붙여넣어 보내고, 폰 카톡에서 그 메시지를 [공유 → 랑이 특가 자동화] 하면 끝! (지금 보이는 ${folderName || "전체 "}글을 보내요)`;
   $("benchTip").innerHTML = IN_EXTENSION || BRIDGE
     ? "반응 좋은 스레드 글을 모아둬요. 링크를 붙여넣거나, PC 크롬에서 스레드 글을 열고 오른쪽 아래 <b>[📥 벤치마킹 담기]</b>를 눌러도 돼요."
     : "반응 좋은 스레드 글을 모아둬요. 스레드 글에서 <b>[공유 → 링크 복사]</b> 후 붙여넣거나 <b>[공유 → 랑이 특가 자동화]</b>로 보내면 담겨요.";
@@ -1633,8 +1641,54 @@ $("benchAdd").onclick = () => {
   const v = $("benchUrl").value.trim();
   if (!v) return toast("스레드 글 링크를 붙여넣어 주세요");
   $("benchUrl").value = "";
+  if (v.includes(BENCH_MARK)) return benchImport(v);
   addBench(v);
 };
+
+// PC ↔ 폰 옮기기: 보관함을 짧은 글자(압축)로 바꿔서 카톡 '나와의 채팅'으로 보내고, 받는 쪽에서 붙여넣으면 합쳐져요
+const BENCH_MARK = "RANGIBENCH1:";
+const b64u = (u8) => { let s = ""; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+const unb64u = (t) => Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+async function gz(str, back) {
+  const cs = back ? new DecompressionStream("gzip") : new CompressionStream("gzip");
+  const input = back ? str : new TextEncoder().encode(str);
+  const out = new Uint8Array(await new Response(new Blob([input]).stream().pipeThrough(cs)).arrayBuffer());
+  return back ? new TextDecoder().decode(out) : out;
+}
+async function benchExport() {
+  const view = $("benchFolder").value || "all";
+  const list = (state.bench || []).filter((b) => view === "all" || (view === "none" ? !b.folder : b.folder === view));
+  if (!list.length) return toast("보낼 글이 없어요");
+  // 사진 주소는 길고 며칠 뒤 만료돼서 빼요 (영상 개수만 남겨요)
+  const data = { f: state.benchFolders || [], b: list.map((b) => ({ ...b, media: (b.media || []).filter((m) => m.type === "video").map(() => ({ type: "video", src: "" })) })) };
+  const code = b64u(await gz(JSON.stringify(data)));
+  const where = CAN_SHARE ? "PC" : "폰";
+  const text = `📚 랑이 벤치마킹 보관함 ${list.length}개\n${where} 랑이 특가 앱의 벤치마킹 보관함 링크 칸에 이 메시지를 통째로 붙여넣고 [📥 담기]를 누르세요\n${BENCH_MARK}${code}`;
+  if (CAN_SHARE) return shareText(text);
+  await copy(text);
+  toast(`📤 ${list.length}개를 복사했어요! 카톡 PC '나와의 채팅'에 붙여넣어 보내고 → 폰 카톡에서 그 메시지를 꾹 눌러 [공유 → 랑이 특가 자동화] (또는 복사해서 앱 링크 칸에 붙여넣기)`, 10000);
+}
+async function benchImport(text) {
+  const m = String(text).match(/RANGIBENCH1:([A-Za-z0-9_-]+)/);
+  let data = null;
+  try { data = JSON.parse(await gz(unb64u(m[1]), true)); } catch (e) {}
+  if (!data || !Array.isArray(data.b)) return toast("보관함 글자가 잘렸거나 망가졌어요. 메시지를 통째로 다시 복사해 주세요", 5000);
+  if (!Array.isArray(state.bench)) state.bench = [];
+  let added = 0;
+  data.b.forEach((nb) => {
+    if (!nb || !nb.url) return;
+    const cur = state.bench.find((x) => x.url === nb.url);
+    if (!cur) { state.bench.push({ ...nb }); added++; return; }
+    // 이미 있는 글: 비어 있는 칸만 채워요 (사진 미리보기·내가 고친 본문은 그대로)
+    for (const k of ["text", "likes", "replies", "reposts", "date", "folder"]) if (!cur[k] && nb[k]) cur[k] = nb[k];
+  });
+  state.bench.sort((a, b) => (b.addedAt || 0) - (a.addedAt || 0));
+  state.benchFolders = [...new Set([...(state.benchFolders || []), ...(data.f || [])])];
+  save(); draw();
+  $("benchCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  toast(`📥 벤치마킹 보관함 ${data.b.length}개를 받았어요 (새 글 ${added}개)`, 5000);
+}
+$("benchExport").onclick = benchExport;
 $("benchUrl").addEventListener("keydown", (e) => { if (e.key === "Enter") $("benchAdd").click(); });
 $("benchFolder").onchange = (e) => { state.benchView = e.target.value; save(); draw(); };
 $("benchSort").onchange = (e) => { state.benchSort = e.target.value; save(); draw(); };
