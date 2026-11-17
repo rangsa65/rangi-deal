@@ -1648,13 +1648,69 @@ async function thCheck(token) {
   return me;
 }
 const postBusy = new Set();
+// 올리기 전 마지막 확인창: 내 글을 여기서 바로 고칠 수 있고, 인용될 원래 글도 같이 보여줘요 → 고친 글(또는 취소면 null)
+function reviewBeforePost(b, text, username) {
+  return new Promise((resolve) => {
+    const ov = document.createElement("div");
+    ov.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px";
+    const box = document.createElement("div");
+    box.style.cssText = "background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.3)";
+    const title = document.createElement("div");
+    title.style.cssText = "font-weight:800;font-size:16px";
+    title.textContent = `🚀 @${username || "내 계정"}에 올리기 전 확인`;
+    const label = document.createElement("div");
+    label.style.cssText = "font-size:13px;font-weight:700";
+    label.textContent = "✍️ 올라갈 내 글 (여기서 바로 고칠 수 있어요)";
+    const ta = document.createElement("textarea");
+    ta.value = text; ta.rows = Math.min(10, Math.max(4, text.split("\n").length + 1));
+    ta.style.cssText = "width:100%;box-sizing:border-box;border:2px solid #f2c300;border-radius:10px;padding:10px;font-size:15px;line-height:1.5";
+    const count = document.createElement("div");
+    count.style.cssText = "font-size:12px;text-align:right;color:#888";
+    const quote = document.createElement("div");
+    quote.style.cssText = "border:1px solid #ddd;border-radius:12px;padding:10px;font-size:13px;color:#444;background:#fafafa";
+    const qh = document.createElement("div"); qh.style.cssText = "font-weight:700;margin-bottom:4px";
+    qh.textContent = `🔁 인용될 원래 글 · @${b.author}`;
+    const qt = document.createElement("div"); qt.style.cssText = "white-space:pre-wrap;max-height:90px;overflow:hidden";
+    qt.textContent = (b.text || "").split("\n").slice(0, 4).join("\n") || "(본문 없음)";
+    const vids = (b.media || []).filter((m) => m.type === "video").length;
+    const imgs = (b.media || []).filter((m) => m.type === "image").length;
+    const qm = document.createElement("div"); qm.style.cssText = "margin-top:4px;color:#888";
+    qm.textContent = (imgs || vids) ? `사진 ${imgs}장${vids ? ` · 영상 ${vids}개` : ""}도 인용으로 같이 보여요` : "";
+    quote.append(qh, qt, qm);
+    const btns = document.createElement("div"); btns.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
+    const cancel = document.createElement("button"); cancel.type = "button"; cancel.textContent = "취소";
+    cancel.style.cssText = "flex:none;white-space:nowrap";
+    const ok = document.createElement("button"); ok.type = "button"; ok.className = "primary"; ok.textContent = "🚀 이대로 올리기";
+    btns.append(cancel, ok);
+    const upd = () => {
+      const n = ta.value.trim().length;
+      count.textContent = `${n} / 500자`;
+      count.style.color = n > 500 ? "#d33" : "#888";
+      ok.disabled = !n || n > 500;
+    };
+    ta.oninput = upd; upd();
+    const close = (v) => { ov.remove(); resolve(v); };
+    cancel.onclick = () => close(null);
+    ov.onclick = (e) => { if (e.target === ov) close(null); };
+    ok.onclick = () => close(ta.value.trim());
+    box.append(title, label, ta, count, quote, btns);
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    ta.focus();
+  });
+}
 async function postQuoteNow(b, text) {
-  const body = (text || "").trim();
-  if (!body) return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요");
-  if (body.length > 500) return toast(`스레드 글은 500자까지예요 (지금 ${body.length}자). 조금 줄여주세요`, 5000);
+  const draft = (text || "").trim();
+  if (!draft) return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요");
   const a = thAuth();
   if (!a) return toast("⚙️ 내 방 설정에 스레드 토큰을 먼저 넣어주세요");
-  if (!confirm(`@${a.username || "내 계정"}에 이 글을 올릴까요? (원래 글 @${b.author} 인용)\n\n${body}`)) return;
+  const body = await reviewBeforePost(b, draft, a.username);
+  if (!body) return;
+  if (body !== draft) { // 확인창에서 고친 글은 카드에도 남겨요
+    const cur = (state.bench || []).find((x) => x.url === b.url);
+    if (cur) cur.mine = body;
+    save();
+  }
   postBusy.add(b.url); draw();
   let msg = "";
   try {
