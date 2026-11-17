@@ -284,12 +284,6 @@
       </div>
       <label>같이 올라갈 사진</label>
       <div id="threadsPhotos" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"></div>
-      <label>🔁 인용할 원래 글 (스레드 글 링크, 선택)</label>
-      <div style="display:flex;gap:8px">
-        <input id="quoteUrl" placeholder="스레드 글에서 [공유 → 링크 복사] 후 붙여넣기" style="flex:1">
-        <button id="quoteClear" type="button">✖</button>
-      </div>
-      <p class="hint" id="quoteHint" hidden>[🔁 원래 글 인용해서 올리기]를 누르면 본문이 복사되고 원래 글이 열려요 → <b>🔁 리포스트 → 인용</b> → 붙여넣기 → 게시. 원래 사진·영상은 출처와 함께 내 글 아래에 보여요.</p>
       <label>본문</label>
       <pre class="out" id="threadsOut"></pre>
       <div class="btns">
@@ -1005,9 +999,6 @@ function draw() {
   });
   sel.value = state.items.some((i) => itemKey(i) === state.threadsKey) ? state.threadsKey : "";
   $("threadsItemBox").hidden = ["list", "recruit", "info"].includes(state.threadsType) || !state.items.length;
-  if (document.activeElement !== $("quoteUrl")) $("quoteUrl").value = state.quoteUrl || "";
-  $("quoteHint").hidden = !state.quoteUrl;
-  $("postThreads").textContent = state.quoteUrl ? "🔁 원래 글 인용해서 올리기" : "🧵 스레드에 바로 올리기";
   // 스레드 글에 같이 올라갈 사진 미리보기
   const tp = $("threadsPhotos");
   tp.replaceChildren();
@@ -1453,10 +1444,6 @@ function findSame(it) {
 // fallbackName: 공유 '제목'(예: "토스쇼핑")은 본문에 상품명이 없을 때만 써요
 // 스레드 글 주소(threads.com/@아이디/post/글번호)만 골라내요
 const THREADS_POST_RE = /https?:\/\/(?:www\.)?threads\.(?:net|com)\/@[\w.]+\/post\/[\w-]+/i;
-function setQuote(url) {
-  state.quoteUrl = url ? url.replace(/^http:/, "https:") : "";
-  save(); draw();
-}
 function importText(text, fallbackName) {
   const all = [fallbackName, text].filter(Boolean).join("\n");
   if (all.includes("RANGIBENCH1:")) { $("importText").value = ""; benchImport(all); return; } // 다른 기기에서 보낸 벤치마킹 보관함
@@ -2475,13 +2462,6 @@ $("copyThreadsComment").onclick = () => renderThreadsComment() ? copy(renderThre
 $("postThreads").onclick = async () => {
   const body = renderThreads();
   const comment = renderThreadsComment();
-  // 인용할 원래 글이 있으면: 본문을 복사해 두고 원래 글을 열어요 → 리포스트 → 인용 → 붙여넣기
-  if (state.quoteUrl) {
-    try { await navigator.clipboard.writeText(body); } catch (e) { await copy(body); }
-    window.open(state.quoteUrl, "_blank");
-    return toast("본문 복사 완료! 열린 글에서 🔁 리포스트 → 인용 → 글쓰기 칸 꾹 눌러 붙여넣기 → 게시"
-      + (comment.trim() ? ". 첫 댓글은 게시 후 [📋 첫 댓글 복사]로 달아주세요" : ""), 9000);
-  }
   // 휴대폰: 스레드 바로가기 주소로는 사진을 못 넘겨요 → 사진이 있으면 공유 창으로 사진+글을 같이 보내요
   if (CAN_SHARE) {
     const items = threadsShareItems().filter((i) => i.photo || i.imgUrl);
@@ -2523,13 +2503,6 @@ $("aiPrompt").onclick = async () => {
 };
 $("honeyItem").addEventListener("change", () => { $("honeyHint").hidden = !$("honeyItem").checked; });
 $("threadsItem").onchange = (e) => { state.threadsKey = e.target.value || null; state.honeyFresh = false; state.threadsPhoto = ""; save(); draw(); };
-$("quoteUrl").onchange = (e) => {
-  const v = e.target.value.trim();
-  const m = v.match(THREADS_POST_RE);
-  if (v && !m) { toast("스레드 글 링크가 아니에요. 글에서 [공유 → 링크 복사]로 가져와 주세요"); e.target.value = state.quoteUrl || ""; return; }
-  setQuote(m ? m[0] : "");
-};
-$("quoteClear").onclick = () => setQuote("");
 $("rerollThreads").onclick =() => { state.threadsSeed++; state.threadsPhoto = ""; save(); draw(); };
 document.querySelectorAll("#threadsTabs button").forEach((b) => (b.onclick = () => { state.threadsType = b.dataset.type; state.threadsPhoto = ""; save(); draw(); }));
 $("linkInBody").addEventListener("change", () => { state.settings.linkInBody = $("linkInBody").checked; save(); draw(); });
