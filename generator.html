@@ -1622,9 +1622,23 @@ function thSetAuth(a) { try { a ? localStorage.setItem(TH_TOKEN_STORE, JSON.stri
 async function thCall(path, params, method) {
   const a = thAuth();
   const body = new URLSearchParams({ ...params, access_token: a ? a.token : "" });
-  const res = method === "GET"
-    ? await fetch(`${TH_API}${path}?${body}`)
-    : await fetch(`${TH_API}${path}`, { method: "POST", body });
+  // 휴대폰은 연결이 잠깐 끊기는 일이 많아서, 연결 실패면 2초 간격으로 3번까지 다시 해봐요
+  let res;
+  for (let i = 0; ; i++) {
+    try {
+      res = method === "GET"
+        ? await fetch(`${TH_API}${path}?${body}`)
+        : await fetch(`${TH_API}${path}`, { method: "POST", body });
+      break;
+    } catch (e) {
+      if (i >= 2) {
+        const step = path.includes("publish") ? "게시" : path.endsWith("/threads") ? "글 만들기" : path.includes("/me") ? "계정 확인" : "사진·영상 처리 확인";
+        const err = new Error(`스레드 서버에 연결이 안 됐어요 (${step} 단계). 와이파이·데이터를 확인하고, 올라갈 때까지 이 화면을 켜 둔 채 다시 눌러주세요`);
+        err.net = true; throw err;
+      }
+      await new Promise((s) => setTimeout(s, 2000));
+    }
+  }
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
     const e = data.error || {};
@@ -1827,7 +1841,7 @@ async function postQuoteNow(b, text) {
     save();
     msg = "🚀 스레드에 올렸어요!" + (media.length ? ` 내 사진·영상 ${media.length}개도 같이 올라갔어요` : "");
   } catch (e) {
-    msg = e.cloud ? e.message
+    msg = e.cloud || e.net ? e.message
       : e.code === 190 ? "스레드 토큰이 만료됐거나 틀렸어요. ⚙️ 내 방 설정에서 새 토큰을 넣어주세요"
       : "스레드에 올리지 못했어요: " + e.message;
   }
