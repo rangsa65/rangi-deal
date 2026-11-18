@@ -2063,7 +2063,7 @@ function renderBench() {
       if (!body) { mine.focus(); return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요. AI가 써준 글이나 직접 쓴 글을 먼저 넣어주세요", 5000); }
       b.mine = mine.value; save();
       try { await navigator.clipboard.writeText(body); } catch (e) { await copy(body); }
-      window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body), "_blank");
+      window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body + "\n"), "_blank"); // 끝에 줄바꿈: PC 스레드가 마지막 글자를 잘라 끝 이모지가 �로 깨지는 것 방지
       toast("내 글 복사 완료! 열린 스레드 글쓰기에 글이 들어가 있어요 (비어 있으면 꾹 눌러 붙여넣기). 내 사진·영상을 붙이고 게시하세요", 9000);
     }, !thAuth());
     const sel = document.createElement("select"); sel.style.width = "auto";
@@ -2571,7 +2571,7 @@ $("postThreads").onclick = async () => {
   if (!photoCopied && comment.trim()) {
     try { await navigator.clipboard.writeText(comment); } catch (e) {}
   }
-  window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body), "_blank");
+  window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body + "\n"), "_blank"); // 끝에 줄바꿈: PC 스레드가 마지막 글자를 잘라 끝 이모지가 �로 깨지는 것 방지
   if (photoCopied) {
     toast("스레드가 열렸어요. 글쓰기 칸에 Ctrl+V 하면 상품 사진이 붙어요. 게시 후 첫 댓글은 [📋 첫 댓글 복사]로 달아주세요", 7000);
   } else {
