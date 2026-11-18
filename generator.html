@@ -2063,7 +2063,9 @@ function renderBench() {
       if (!body) { mine.focus(); return toast("[✍️ 내가 올릴 글] 칸이 비어 있어요. AI가 써준 글이나 직접 쓴 글을 먼저 넣어주세요", 5000); }
       b.mine = mine.value; save();
       try { await navigator.clipboard.writeText(body); } catch (e) { await copy(body); }
-      window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body + "\n"), "_blank"); // 끝에 줄바꿈: PC 스레드가 마지막 글자를 잘라 끝 이모지가 �로 깨지는 것 방지
+      // PC 스레드는 링크로 받은 이모지를 �로 깨뜨려서, 이모지 있는 글은 빈 글쓰기 창만 열고 붙여넣게 해요
+      window.open("https://www.threads.com/intent/post" + (thEmojiBreaks(body) ? "" : "?text=" + encodeURIComponent(body)), "_blank");
+      if (thEmojiBreaks(body)) return toast("내 글 복사 완료! 열린 스레드 글쓰기 칸에 Ctrl+V 하세요 (이모지가 안 깨지게 붙여넣기로 넣어요). 내 사진·영상을 붙이고 게시하세요", 9000);
       toast("내 글 복사 완료! 열린 스레드 글쓰기에 글이 들어가 있어요 (비어 있으면 꾹 눌러 붙여넣기). 내 사진·영상을 붙이고 게시하세요", 9000);
     }, !thAuth());
     const sel = document.createElement("select"); sel.style.width = "auto";
@@ -2149,6 +2151,8 @@ $("benchDelFolder").onclick = () => {
 
 // ---------- 휴대폰에서 카톡 등으로 바로 공유 ----------
 const CAN_SHARE = !!navigator.share && matchMedia("(pointer: coarse)").matches;
+// PC 스레드 글쓰기 링크(?text=)는 이모지 같은 특수 글자를 �로 깨뜨려요
+const thEmojiBreaks = (t) => !CAN_SHARE && /[\u{10000}-\u{10FFFF}]/u.test(t || "");
 async function shareText(text) {
   try { await navigator.share({ text }); }
   catch (e) { if (e.name !== "AbortError") copy(text); }
@@ -2568,11 +2572,20 @@ $("postThreads").onclick = async () => {
   const withPhoto = !CAN_SHARE ? threadsShareItems().find((i) => i.photo || i.imgUrl) : null;
   // 새 창이 열리면 이 화면이 포커스를 잃어 복사가 막히니까, 복사를 먼저 끝내고 열어요
   const photoCopied = withPhoto ? await copyPhoto(withPhoto, true) : false;
+  // PC 스레드는 링크로 받은 글의 이모지(📌🙋 등)를 �로 깨뜨려요 → 이모지 있는 글은 복사해서 붙여넣게 해요
+  if (!photoCopied && thEmojiBreaks(body)) {
+    try { await navigator.clipboard.writeText(body); } catch (e) { await copy(body); }
+    window.open("https://www.threads.com/intent/post", "_blank");
+    return toast("글이 복사돼 있어요! 열린 스레드 글쓰기 칸에 Ctrl+V 하세요 (이모지가 안 깨지게 붙여넣기로 넣어요)"
+      + (comment.trim() ? ". 첫 댓글은 게시 후 [📋 첫 댓글 복사]로 달아주세요" : ""), 9000);
+  }
   if (!photoCopied && comment.trim()) {
     try { await navigator.clipboard.writeText(comment); } catch (e) {}
   }
-  window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body + "\n"), "_blank"); // 끝에 줄바꿈: PC 스레드가 마지막 글자를 잘라 끝 이모지가 �로 깨지는 것 방지
-  if (photoCopied) {
+  window.open("https://www.threads.com/intent/post?text=" + encodeURIComponent(body), "_blank");
+  if (photoCopied && thEmojiBreaks(body)) {
+    toast("스레드가 열렸어요. Ctrl+V 하면 상품 사진이 붙어요. 이모지가 �로 보이면 지우고 다시 넣어주세요", 9000);
+  } else if (photoCopied) {
     toast("스레드가 열렸어요. 글쓰기 칸에 Ctrl+V 하면 상품 사진이 붙어요. 게시 후 첫 댓글은 [📋 첫 댓글 복사]로 달아주세요", 7000);
   } else {
     const noPhoto = CAN_SHARE ? "이 글에는 담긴 사진이 없어서 글만 열었어요. 사진은 스레드에서 직접 추가해 주세요. " : "";
